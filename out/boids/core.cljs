@@ -5,8 +5,15 @@
 (def canvas (.getElementById js/document "sky"))
 (def canvas-color "white")
 (def context (.getContext canvas "2d"))
-(def canvas-dimensions {:x (.-width canvas)
-                        :y (.-height canvas)})
+(def canvas-dimensions [(.-width canvas)
+                        (.-height canvas)])
+
+(let [[x y] canvas-dimensions]
+  (set! (.-fillStyle context) "white")
+  (.fillRect context 0 0 x y))
+
+(defn print-func [x]
+  (. js/console (log (str x))))
 
 (defn render-bird!
   [context bird color]
@@ -16,14 +23,17 @@
 
 (defn draw-bird! 
   [context bird]
-  (render-bird! context bird "black"))
+  (print-func "Drawing: ")
+  (print-func (:xy bird))
+  (render-bird! context bird (:color bird)))
 
 (defn erase-bird! 
   [context bird]
-  (render-bird! context bird canvas-color))
+  (print-func "Erasing: ")
+  (print-func (:xy bird))
+  (let [[x y] (:xy bird)]
+    (.clearRect context x y 10 10)))
 
-(defn print-func [x]
-  (. js/console (log (str x))))
 
 (defn sum-vectors
   [first-vec & vecs]
@@ -34,7 +44,6 @@
   (let [squared (mapv #(Math/pow % 2) v)
         summed (reduce + squared)
         rooted (Math/sqrt summed)]
-    (print-func summed)
     (mapv #(/ % rooted) v)))
 
 (defn test-turn-func [bird]
@@ -43,13 +52,14 @@
 (defn update-heading
   [{:keys [turn-funcs heading] :as bird}]
   (let [list-of-new-headings (map #(% bird) turn-funcs)
-        new-heading (normalize-vector (sum-vectors heading
-                                                   list-of-new-headings))]
+        new-heading (normalize-vector (apply sum-vectors 
+                                             heading
+                                             list-of-new-headings))]
     (assoc bird :heading new-heading)))
 
 (defn update-coords
   [{:keys [xy heading] :as bird}]
-  (assoc bird :xy (sum-vectors xy heading)))
+  (assoc bird :xy (mapv Math/round (sum-vectors xy heading))))
 
 (defn animate-bird 
   [context bird]
@@ -62,9 +72,11 @@
 
 (. js/console (log "Hello world!"))
 
+
 (animate-bird context {:xy [0 0] 
                        :color "black" 
                        :heading [0 0]
-                       :turn-funcs []
+                       :turn-funcs [test-turn-func]
                        :speed 30})
+
 
