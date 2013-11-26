@@ -9,10 +9,11 @@
                         (.-height canvas)])
 
 (def visible-range 100)
+(def inertia 100)
 
 (def boids (atom {}))
 
-(def min-separation 20)
+(def min-separation 30)
 
 (def goal (atom [200 200]))
 
@@ -23,8 +24,6 @@
 (defn render-bird!
   [context bird color]
   (let [[x y] (:xy bird)]
-    (when (< x 25)
-      (print-func (:uid bird) (:xy bird) (:heading bird)))
     (set! (.-fillStyle context) color)
     (.fillRect context x y 10 10)))
 
@@ -124,7 +123,7 @@
                                       res))
                                        turn-funcs)
         new-heading (normalize-vector (apply sum-vectors 
-                                             heading
+                                             (mapv (partial * inertia) heading)
                                              (remove empty? list-of-new-headings)))]
     (assoc bird :heading (mapv (partial * 3) new-heading))))
 
@@ -141,7 +140,7 @@
   (go (loop [old-bird bird]
         (let [new-bird (update-coords (update-heading old-bird
                                                       (vals @boids)))]
-          (<! (timeout (/ 10000 (:speed old-bird))))  
+          (<! (timeout 1 #_(/ 100 (:speed old-bird))))  
 
           (erase-bird! context old-bird)
           (draw-bird! context new-bird)
@@ -160,7 +159,8 @@
      :turn-funcs [(partial if-empty-wrapper adhere-to-center)
                   (partial if-empty-wrapper maintain-separation)
                   (partial if-empty-wrapper align-direction)
-                  go-for-goal]
+                  ;go-for-goal
+                  ]
      :uid n
      :speed 1000}))
 
