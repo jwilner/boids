@@ -9,7 +9,8 @@
                         (.-height canvas)])
 
 (def visible-range 100)
-(def inertia 100)
+(def inertia 1000)
+(def num-birds 20)
 
 (def boids (atom {}))
 
@@ -36,12 +37,17 @@
   (let [[x y] (:xy bird)]
     (.clearRect context x y 10 10)))
 
+(defn wrap [v] (mapv mod v canvas-dimensions))
+
 ;; math ops
 (defn distance
   "tuple tuple -> Number."
-  [[x1 y1] [x2 y2]]
-  (Math/sqrt (+ (Math/pow (- x1 x2) 2)
-                (Math/pow (- y1 y2) 2))))
+  [v1 v2]
+  (->> (mapv - v1 v2)
+       (mapv #(Math/pow % 2))
+       (reduce +)
+       (Math/sqrt)))
+
 
 (defn sum-vectors
   [& vecs]
@@ -129,7 +135,8 @@
 
 (defn update-coords
   [{:keys [xy heading] :as bird}]
-  (assoc bird :xy (mapv Math/round (sum-vectors xy heading))))
+  (assoc bird :xy
+         (wrap (mapv Math/round (sum-vectors xy heading)))))
 
 (defn register-bird!
   [bird]
@@ -140,7 +147,7 @@
   (go (loop [old-bird bird]
         (let [new-bird (update-coords (update-heading old-bird
                                                       (vals @boids)))]
-          (<! (timeout 1 #_(/ 100 (:speed old-bird))))  
+          (<! (timeout (/ 20000 (:speed old-bird))))  
 
           (erase-bird! context old-bird)
           (draw-bird! context new-bird)
@@ -150,16 +157,15 @@
 
 ;(. js/console (log "Hello world!"))
 
-(doseq [n (range 25)]
+(doseq [n (range num-birds)]
   (register-bird!
-    {:xy [(rand-int 400)
-          (rand-int 400)]
+    {:xy (mapv rand-int canvas-dimensions) 
      :color "black" 
      :heading [(* n 10) (* n 10)]
      :turn-funcs [(partial if-empty-wrapper adhere-to-center)
                   (partial if-empty-wrapper maintain-separation)
                   (partial if-empty-wrapper align-direction)
-                  ;go-for-goal
+                  go-for-goal
                   ]
      :uid n
      :speed 1000}))

@@ -3,7 +3,9 @@ pom.xml
 /lib/
 /classes/
 /targets/
+/target
 .lein-deps-sum
 .lein-repl-history
+.nrepl-port
 /out/
 *.js
