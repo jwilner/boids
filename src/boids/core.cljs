@@ -1,5 +1,7 @@
 (ns boids.core
-  (:use [cljs.core.async :only [<! >! timeout chan close!]])
+  (:use [cljs.core.async :only [<! >! timeout chan close! put!]])
+  (:require [goog.dom :as dom]
+            [goog.events :as events])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
 (def canvas (.getElementById js/document "sky"))
@@ -101,10 +103,8 @@
                  (/ min-separation (distance xy (:xy b2))))
         get-away-dir (fn [bird] (direction (:xy bird) xy))
         weighted-away-dir (fn [bird] (mapv #(* (weight bird) %) (get-away-dir bird)))
-        ;away-dirs (remove (comp js/isNaN first) (map weighted-away-dir birds-too-close))
         away-dirs (map weighted-away-dir birds-too-close)
         result (apply sum-vectors away-dirs)]
-  ;  (when (js/isNaN (first result)) (print-func result (:xy bird) away-dirs))
     (if (empty? result) [0 0] result)))
 
 (defn align-direction 
@@ -113,8 +113,9 @@
 
 (defn go-for-goal
   [_ bird]
-  ;(print-func (heading-to-dest bird @goal))
-  (heading-to-dest bird @goal))
+  (if-let [g @goal]
+    (heading-to-dest bird g)
+    [0 0]))
 
 ;; bird functions
 (defn update-heading
@@ -155,7 +156,24 @@
 
           (recur new-bird)))))
 
-;(. js/console (log "Hello world!"))
+(defn listen
+  "DOM element -> channel."
+  [el type]
+  (let [out (chan)]
+    (events/listen el type #(put! out %))
+    out))
+
+(let [mouseovers (listen (dom/getElement "sky") "mousemove")]
+  (go
+    (while true
+      (let [e (<! mouseovers)]
+        (swap! goal (fn[] [(.-clientX e) (.-clientY e)]))))))
+
+(let [mouseout (listen (dom/getElement "sky") "mouseout")]
+  (go
+    (while true
+      (let [e (<! mouseout)]
+        (swap! goal (fn[] nil))))))
 
 (doseq [n (range num-birds)]
   (register-bird!
