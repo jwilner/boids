@@ -12,6 +12,8 @@
 
 (def boids (atom {}))
 
+(def min-separation 20)
+
 (def goal (atom [200 200]))
 
 (defn print-func [& x]
@@ -21,6 +23,8 @@
 (defn render-bird!
   [context bird color]
   (let [[x y] (:xy bird)]
+    (when (< x 25)
+      (print-func (:uid bird) (:xy bird) (:heading bird)))
     (set! (.-fillStyle context) color)
     (.fillRect context x y 10 10)))
 
@@ -41,8 +45,8 @@
                 (Math/pow (- y1 y2) 2))))
 
 (defn sum-vectors
-  [first-vec & vecs]
-  (apply mapv + first-vec vecs))
+  [& vecs]
+  (apply mapv + vecs))
 
 (defn normalize-vector
   [v]
@@ -51,9 +55,14 @@
         rooted (Math/sqrt summed)]
     (mapv #(/ % rooted) v)))
 
-(def min-separation 20)
-
 ;; turn funcs and helpers
+
+(defn if-empty-wrapper
+  [func neighbors bird]
+  (if (empty? neighbors)
+    [0 0]
+    (func neighbors bird)))
+
 (defn direction
   [from to]
   (mapv - to from))
@@ -68,7 +77,7 @@
   [neighbors bird]
   (let [center (->> neighbors
                     (map :xy)
-                    (apply mapv +)
+                    (apply sum-vectors)
                     (mapv #(/ % (count neighbors))))]
     (heading-to-dest bird center)))
 
@@ -80,18 +89,22 @@
   (filter #(< (distance xy (:xy %)) radius) flock))
 
 (defn maintain-separation 
+  "Flock, bird -> heading."
   [flock {:keys [xy] :as bird}]
   (let [birds-too-close (birds-within-radius bird flock min-separation)
-        weight (fn [b2] (/ min-separation (distance xy (:xy b2))))
+        weight (fn [b2]
+                 (/ min-separation (distance xy (:xy b2))))
         get-away-dir (fn [bird] (direction (:xy bird) xy))
-        weighted-away-dir (fn[bird] (mapv #(* (weight bird) %) (get-away-dir bird)))
+        weighted-away-dir (fn [bird] (mapv #(* (weight bird) %) (get-away-dir bird)))
+        ;away-dirs (remove (comp js/isNaN first) (map weighted-away-dir birds-too-close))
         away-dirs (map weighted-away-dir birds-too-close)
-        result (apply mapv + away-dirs)]
+        result (apply sum-vectors away-dirs)]
+  ;  (when (js/isNaN (first result)) (print-func result (:xy bird) away-dirs))
     (if (empty? result) [0 0] result)))
 
 (defn align-direction 
   [flock bird]
-  (apply mapv + (map :heading flock)))
+  (apply sum-vectors (map :heading flock)))
 
 (defn go-for-goal
   [_ bird]
@@ -103,12 +116,16 @@
   "bird, [list of birds] -> bird with new heading."
   [{:keys [turn-funcs heading xy] :as bird} flock]
   (let [flockers (remove (partial = bird) flock)
-        visible-birds (filter #(< (distance xy (:xy %)) visible-range)
-                              flockers)
-        list-of-new-headings (map #(% visible-birds bird) turn-funcs)
+        visible-birds (birds-within-radius bird flockers visible-range)
+        list-of-new-headings (map (fn [func]
+                                    (let [res (func visible-birds bird)]
+                                     (when (empty? res)
+                                      (print-func func))
+                                      res))
+                                       turn-funcs)
         new-heading (normalize-vector (apply sum-vectors 
                                              heading
-                                             list-of-new-headings))]
+                                             (remove empty? list-of-new-headings)))]
     (assoc bird :heading (mapv (partial * 3) new-heading))))
 
 (defn update-coords
@@ -124,7 +141,7 @@
   (go (loop [old-bird bird]
         (let [new-bird (update-coords (update-heading old-bird
                                                       (vals @boids)))]
-          (<! (timeout (/ 1000 (:speed old-bird))))  
+          (<! (timeout (/ 10000 (:speed old-bird))))  
 
           (erase-bird! context old-bird)
           (draw-bird! context new-bird)
@@ -140,9 +157,9 @@
           (rand-int 400)]
      :color "black" 
      :heading [(* n 10) (* n 10)]
-     :turn-funcs [adhere-to-center
-                  maintain-separation
-                  align-direction
+     :turn-funcs [(partial if-empty-wrapper adhere-to-center)
+                  (partial if-empty-wrapper maintain-separation)
+                  (partial if-empty-wrapper align-direction)
                   go-for-goal]
      :uid n
      :speed 1000}))
