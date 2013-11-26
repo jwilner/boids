@@ -8,10 +8,14 @@
 (def canvas-dimensions [(.-width canvas)
                         (.-height canvas)])
 
+(def visible-range 100)
+
 (def boids (atom {}))
 
-(defn print-func [x]
-  (. js/console (log (str x))))
+(def goal (atom [200 200]))
+
+(defn print-func [& x]
+  (. js/console (log (apply str x))))
 
 ;; canvas functions
 (defn render-bird!
@@ -46,12 +50,17 @@
         rooted (Math/sqrt summed)]
     (mapv #(/ % rooted) v)))
 
-(def min-separation 20)
+(def min-separation 40)
 
 ;; turn funcs and helpers
 (defn direction
   [from to]
   (mapv - to from))
+
+#_(defn birds-within-radius
+  [flock radius]
+  (filter #(< (distance xy (:xy %)) min-separation) 
+                                flock))
 
 (defn heading-to-dest 
   "bird dest -> heading."
@@ -71,45 +80,38 @@
   [flock {:keys [xy] :as bird}]
   (let [birds-too-close (filter #(< (distance xy (:xy %)) min-separation) 
                                 flock)
-        locations (map :xy birds-too-close)
-        away-dirs (map #(direction % xy) locations)]
-    (apply mapv + away-dirs)))
+        away-dirs (map #(* (direction (:xy %) xy)
+                           (/ min-separation
+                             (distance xy (:xy %)))) 
+                       birds-too-close)
+        result (apply mapv + away-dirs)]
+    (if (empty? result) [0 0] result)))
 
 (defn align-direction 
   [flock bird]
   (apply mapv + (map :heading flock)))
 
-(defn test-turn-func 
+(defn go-for-goal
   [_ bird]
-  (mapv inc (:heading bird)))
+  ;(print-func (heading-to-dest bird @goal))
+  (heading-to-dest bird @goal))
 
 ;; bird functions
 (defn update-heading
   "bird, [list of birds] -> bird with new heading."
-  [{:keys [turn-funcs heading] :as bird} flock]
+  [{:keys [turn-funcs heading xy] :as bird} flock]
   (let [flockers (remove (partial = bird) flock)
-        list-of-new-headings (map #(% flockers bird) turn-funcs)
+        visible-birds (filter #(< (distance xy (:xy %)) visible-range)
+                              flockers)
+        list-of-new-headings (map #(% visible-birds bird) turn-funcs)
         new-heading (normalize-vector (apply sum-vectors 
                                              heading
                                              list-of-new-headings))]
-    (assoc bird :heading new-heading)))
+    (assoc bird :heading (mapv (partial * 3) new-heading))))
 
 (defn update-coords
   [{:keys [xy heading] :as bird}]
   (assoc bird :xy (mapv Math/round (sum-vectors xy heading))))
-
-(def turn-channel (chan))
-
-(go
- (loop []
-   (<! (timeout 500))
-   (def turn-channel (chan))
-   (>! turn-channel "foo")
-   (close! turn-channel)
-   (print-func "foo")
-   (recur)))
-
-(go (loop [] (print-func (<! turn-channel)) (recur)))
 
 (defn register-bird!
   [bird]
@@ -130,17 +132,18 @@
 
 ;(. js/console (log "Hello world!"))
 
-(doseq [n (range 50)]
+(doseq [n (range 25)]
   (register-bird!
     {:xy [(rand-int 400)
           (rand-int 400)]
      :color "black" 
      :heading [(* n 10) (* n 10)]
      :turn-funcs [adhere-to-center
-                  ;;maintain-separation
-                  align-direction]
+                  maintain-separation
+                  align-direction
+                  go-for-goal]
      :uid n
-     :speed 3000}))
+     :speed 1000}))
 
 (doseq [b @boids]
   (animate-bird context (second b)))
