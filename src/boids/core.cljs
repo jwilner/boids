@@ -11,14 +11,11 @@
                         (.-height canvas)])
 
 (def visible-range 100)
-(def inertia 1000)
+(def inertia 500)
 (def num-birds 20)
-
 (def boids (atom {}))
-
 (def min-separation 30)
-
-(def goal (atom [200 200]))
+(def goal (atom nil))
 
 (defn print-func [& x]
   (. js/console (log (apply str x))))
@@ -158,22 +155,19 @@
 
 (defn listen
   "DOM element -> channel."
-  [el type]
+  [el & types]
   (let [out (chan)]
-    (events/listen el type #(put! out %))
+    (doseq [t types] (events/listen el t #(put! out %)))
     out))
 
-(let [mouseovers (listen (dom/getElement "sky") "mousemove")]
+(let [events (listen (dom/getElement "sky") "mousemove" "mouseout")]
   (go
     (while true
-      (let [e (<! mouseovers)]
-        (swap! goal (fn[] [(.-clientX e) (.-clientY e)]))))))
-
-(let [mouseout (listen (dom/getElement "sky") "mouseout")]
-  (go
-    (while true
-      (let [e (<! mouseout)]
-        (swap! goal (fn[] nil))))))
+      (let [e (<! events)
+            t (.-type e)]
+        (condp = t
+          "mousemove" (swap! goal (fn[] [(.-clientX e) (.-clientY e)]))
+          "mouseout" (swap! goal (fn[] nil)))))))
 
 (doseq [n (range num-birds)]
   (register-bird!
