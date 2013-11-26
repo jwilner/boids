@@ -35,6 +35,7 @@
 
 ;; math ops
 (defn distance
+  "tuple tuple -> Number."
   [[x1 y1] [x2 y2]]
   (Math/sqrt (+ (Math/pow (- x1 x2) 2)
                 (Math/pow (- y1 y2) 2))))
@@ -50,17 +51,12 @@
         rooted (Math/sqrt summed)]
     (mapv #(/ % rooted) v)))
 
-(def min-separation 40)
+(def min-separation 20)
 
 ;; turn funcs and helpers
 (defn direction
   [from to]
   (mapv - to from))
-
-#_(defn birds-within-radius
-  [flock radius]
-  (filter #(< (distance xy (:xy %)) min-separation) 
-                                flock))
 
 (defn heading-to-dest 
   "bird dest -> heading."
@@ -76,14 +72,20 @@
                     (mapv #(/ % (count neighbors))))]
     (heading-to-dest bird center)))
 
+;; TODO birds-within-radius infactor
+
+(defn birds-within-radius
+  "bird [list of birds :as flock] Number -> [list of birds :as sub-flock]."
+  [{:keys [xy] :as bird} flock radius]
+  (filter #(< (distance xy (:xy %)) radius) flock))
+
 (defn maintain-separation 
   [flock {:keys [xy] :as bird}]
-  (let [birds-too-close (filter #(< (distance xy (:xy %)) min-separation) 
-                                flock)
-        away-dirs (map #(* (direction (:xy %) xy)
-                           (/ min-separation
-                             (distance xy (:xy %)))) 
-                       birds-too-close)
+  (let [birds-too-close (birds-within-radius bird flock min-separation)
+        weight (fn [b2] (/ min-separation (distance xy (:xy b2))))
+        get-away-dir (fn [bird] (direction (:xy bird) xy))
+        weighted-away-dir (fn[bird] (mapv #(* (weight bird) %) (get-away-dir bird)))
+        away-dirs (map weighted-away-dir birds-too-close)
         result (apply mapv + away-dirs)]
     (if (empty? result) [0 0] result)))
 
