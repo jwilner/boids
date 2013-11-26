@@ -11,7 +11,8 @@
                         (.-height canvas)])
 
 (def visible-range 100)
-(def inertia 500)
+(def default-inertia 1000)
+(def inertia (atom default-inertia))
 (def num-birds 20)
 (def boids (atom {}))
 (def min-separation 30)
@@ -127,7 +128,7 @@
                                       res))
                                        turn-funcs)
         new-heading (normalize-vector (apply sum-vectors 
-                                             (mapv (partial * inertia) heading)
+                                             (mapv (partial * @inertia) heading)
                                              (remove empty? list-of-new-headings)))]
     (assoc bird :heading (mapv (partial * 3) new-heading))))
 
@@ -166,8 +167,9 @@
       (let [e (<! events)
             t (.-type e)]
         (condp = t
-          "mousemove" (swap! goal (fn[] [(.-clientX e) (.-clientY e)]))
-          "mouseout" (swap! goal (fn[] nil)))))))
+          "mousemove" (do (swap! goal (fn[] [(.-clientX e) (.-clientY e)]))
+                          (swap! inertia (fn[] (/ default-inertia 2))))
+          "mouseout" (do (swap! inertia (fn[] default-inertia))))))))
 
 (doseq [n (range num-birds)]
   (register-bird!
