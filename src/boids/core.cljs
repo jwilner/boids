@@ -10,12 +10,14 @@
 (def canvas-dimensions [(.-width canvas)
                         (.-height canvas)])
 
-(def visible-range 100)
-(def default-inertia 1000)
-(def inertia (atom default-inertia))
-(def num-birds 20)
-(def boids (atom {}))
+(def timeout-amount 1)
+(def visible-range 200)
+(def num-birds 25)
 (def min-separation 30)
+
+(def default-inertia 100)
+(def inertia (atom default-inertia))
+(def boids (atom {}))
 (def goal (atom nil))
 
 (defn print-func [& x]
@@ -26,7 +28,7 @@
   [context bird color]
   (let [[x y] (:xy bird)]
     (set! (.-fillStyle context) color)
-    (.fillRect context x y 10 10)))
+    (.fillRect context x y 5 5)))
 
 (defn draw-bird! 
   [context bird]
@@ -35,7 +37,7 @@
 (defn erase-bird! 
   [context bird]
   (let [[x y] (:xy bird)]
-    (.clearRect context x y 10 10)))
+    (.clearRect context x y 5 5)))
 
 (defn wrap [v] (mapv mod v canvas-dimensions))
 
@@ -146,13 +148,19 @@
   (go (loop [old-bird bird]
         (let [new-bird (update-coords (update-heading old-bird
                                                       (vals @boids)))]
-          (<! (timeout (/ 20000 (:speed old-bird))))  
-
+          (<! (timeout (/ timeout-amount (:speed old-bird))))  
           (erase-bird! context old-bird)
           (draw-bird! context new-bird)
           (register-bird! new-bird)
-
           (recur new-bird)))))
+
+#_(defn animation-loop []
+  (go (while true
+        (<! (timeout 100))
+        (doseq [b @boids]
+          (erase-bird! context b)
+          (draw-bird! context b)))))
+
 
 (defn listen
   "DOM element -> channel."
@@ -161,15 +169,17 @@
     (doseq [t types] (events/listen el t #(put! out %)))
     out))
 
-(let [events (listen (dom/getElement "sky") "mousemove" "mouseout")]
-  (go
-    (while true
-      (let [e (<! events)
-            t (.-type e)]
-        (condp = t
-          "mousemove" (do (swap! goal (fn[] [(.-clientX e) (.-clientY e)]))
-                          (swap! inertia (fn[] (/ default-inertia 2))))
-          "mouseout" (do (swap! inertia (fn[] default-inertia))))))))
+(defn handle-events []
+  (let [events (listen (dom/getElement "sky") "mousemove" "mouseout")]
+    (go
+      (while true
+        (let [e (<! events)
+              t (.-type e)]
+          (condp = t
+            "mousemove" (do (swap! goal (fn[] [(.-clientX e) (.-clientY e)]))
+                            (swap! inertia (fn[] (/ default-inertia 2))))
+            "mouseout" (do (swap! goal (fn[] nil))
+                           (swap! inertia (fn[] default-inertia)))))))))
 
 (doseq [n (range num-birds)]
   (register-bird!
@@ -179,10 +189,12 @@
      :turn-funcs [(partial if-empty-wrapper adhere-to-center)
                   (partial if-empty-wrapper maintain-separation)
                   (partial if-empty-wrapper align-direction)
-                  go-for-goal
-                  ]
+                  go-for-goal]
      :uid n
      :speed 1000}))
 
 (doseq [b @boids]
   (animate-bird context (second b)))
+
+(handle-events)
+
