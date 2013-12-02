@@ -9,13 +9,13 @@
 (def canvas-dimensions [(.-width canvas)
                         (.-height canvas)])
 
+(def pixel-speed 3)
 (def timeout-amount 1)
 (def visible-range 200)
 (def num-birds 25)
 (def min-separation 30)
-
 (def default-inertia 100)
-(def inertia (atom default-inertia))
+(def inertia (atom 1) #_(atom default-inertia))
 (def boids (atom {}))
 (def goal (atom nil))
 (def obstacle (atom nil))
@@ -116,7 +116,7 @@
                     (mapv #(/ % (count neighbors))))]
     (heading-to-dest bird center)))
 
-(defn maintain-separation 
+(defn maintain-separation
   "Flock, bird -> heading."
   [flock {:keys [xy] :as bird}]
   (let [birds-too-close (birds-within-radius bird flock min-separation)
@@ -125,7 +125,7 @@
         result (apply sum-vectors away-dirs)]
     (if (empty? result) [0 0] result)))
 
-(defn align-direction 
+(defn align-direction
   "Flock, bird -> heading."
   [flock bird]
   (apply sum-vectors (map :heading flock)))
@@ -160,12 +160,22 @@
         new-heading (normalize-vector (apply sum-vectors 
                                              (mapv (partial * @inertia) heading)
                                              (remove empty? list-of-new-headings)))]
-    (assoc bird :heading (mapv (partial * 3) new-heading))))
+    (assoc bird :heading (mapv (partial * pixel-speed) new-heading))))
+
+(def max-velocity 8)
 
 (defn update-coords
-  [{:keys [xy heading] :as bird}]
-  (assoc bird :xy
-         (wrap (mapv Math/round (sum-vectors xy heading)))))
+  "bird -> bird with new xy coordinates and velocity."
+  [{:keys [xy heading velocity] :as bird}]
+  #_(when (js/isNaN (first xy))
+    (print-func (:uid bird) (:xy bird) (:velocity bird)))
+  (assoc bird
+         ;:xy (wrap (mapv Math/round (sum-vectors heading xy)))
+         :xy (wrap (mapv Math/round (sum-vectors velocity xy)))
+         :velocity (if (> max-velocity (distance [0 0] velocity))
+                     (mapv + velocity heading)
+                     (mapv #(/ % max-velocity) (mapv + velocity heading)))
+         ))
 
 (defn register-bird!
   [bird]
@@ -223,6 +233,7 @@
     {:xy (mapv rand-int canvas-dimensions) 
      :color "black" 
      :heading [(* n 10) (* n 10)]
+     :velocity [0 0]
      :turn-funcs [(partial if-empty-wrapper adhere-to-center)
                   (partial if-empty-wrapper maintain-separation)
                   (partial if-empty-wrapper align-direction)
@@ -235,4 +246,3 @@
   (animate-bird context (second b)))
 
 (handle-events)
-
