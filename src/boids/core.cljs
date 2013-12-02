@@ -117,6 +117,14 @@
                     (mapv #(/ % (count neighbors))))]
     (heading-to-dest bird center)))
 
+#_(def adhere-to-center
+  (memoize (fn [neighbors bird]
+             (let [center (->> neighbors
+                            (map :xy)
+                            (apply sum-vectors)
+                            (mapv #(/ % (count neighbors))))]
+               (heading-to-dest bird center)))))
+
 (defn maintain-separation
   "Flock, bird -> heading."
   [flock {:keys [xy] :as bird}]
@@ -125,7 +133,7 @@
         away-dirs (map weighted-away-dir birds-too-close)
         result (apply sum-vectors away-dirs)]
 
-    (print-func "maintain-separation" "\n\t"
+    #_(print-func "maintain-separation" "\n\t"
                 birds-too-close "\n\t"
                 weighted-away-dir "\n\t"
                 away-dirs "\n\t"
@@ -154,11 +162,11 @@
       [0 0])
     [0 0]))
 
-(def behaviors [(partial if-empty-wrapper adhere-to-center)
-                (partial if-empty-wrapper maintain-separation)
-                (partial if-empty-wrapper align-direction)
-                obstacle-avoidance
-                go-for-goal])
+(def behaviors (map memoize [(partial if-empty-wrapper adhere-to-center)
+                             (partial if-empty-wrapper align-direction)
+                             #_(partial if-empty-wrapper maintain-separation)
+                             obstacle-avoidance
+                             go-for-goal]))
 
 ;; bird functions
 
