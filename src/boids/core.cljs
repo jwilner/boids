@@ -12,6 +12,7 @@
 (def frame-rate 0)
 (def timeout-amount 1)
 (def visible-range 200)
+(def pixel-speed 3)
 (def num-birds 25)
 (def min-separation 30)
 (def default-inertia 100)
@@ -101,8 +102,9 @@
 (defn weighted-repulsion
   "tuple tuple int -> heading."
   [repulse-location location radius]
-  (let [repulse-weight (/ radius (distance location repulse-location))]
-    (mapv (partial * repulse-weight) 
+  (let [d (distance location repulse-location)
+        repulse-weight (/ radius (if (zero? d) 0.001 d))]
+    (mapv (partial * repulse-weight)
           (direction repulse-location location))))
 
 ; turn-funcs
@@ -118,10 +120,17 @@
 (defn maintain-separation
   "Flock, bird -> heading."
   [flock {:keys [xy] :as bird}]
-  (let [birds-too-close (birds-within-radius bird flock min-separation)
-        weighted-away-dir #(weighted-repulsion (:xy %) xy min-separation)
+  (let [weighted-away-dir (fn [bird] (weighted-repulsion (:xy bird) xy min-separation))
+        birds-too-close (birds-within-radius bird flock min-separation)
         away-dirs (map weighted-away-dir birds-too-close)
         result (apply sum-vectors away-dirs)]
+
+    (print-func "maintain-separation" "\n\t"
+                birds-too-close "\n\t"
+                weighted-away-dir "\n\t"
+                away-dirs "\n\t"
+                result)
+
     (if (empty? result) [0 0] result)))
 
 (defn align-direction
@@ -164,38 +173,24 @@
         new-heading (normalize-vector (apply sum-vectors 
                                              (mapv (partial * @inertia) heading)
                                              (remove empty? list-of-new-headings)))]
-    (assoc bird :heading (mapv (partial * pixel-speed) new-heading))))
 
-(def max-velocity 8)
+    ;; debug
+    (when (some #(js/isNaN (first %)) list-of-new-headings)
+      (render-bird! context bird "red")
+      (print-func list-of-new-headings)
+      (throw "BOOM"))
+
+    (assoc bird :heading (mapv (partial * pixel-speed) new-heading))))
 
 (defn update-coords
   "bird -> bird with new xy coordinates and velocity."
   [{:keys [xy heading velocity] :as bird}]
-  #_(when (js/isNaN (first xy))
-    (print-func (:uid bird) (:xy bird) (:velocity bird)))
-  (assoc bird
-         ;:xy (wrap (mapv Math/round (sum-vectors heading xy)))
-         :xy (wrap (mapv Math/round (sum-vectors velocity xy)))
-         :velocity (if (> max-velocity (distance [0 0] velocity))
-                     (mapv + velocity heading)
-                     (mapv #(/ % max-velocity) (mapv + velocity heading)))
-         ))
+  (assoc bird :xy
+         (wrap (mapv Math/round (sum-vectors xy heading)))))
 
 (defn erase-canvas! [context]
   (let [[l w] canvas-dimensions]
     (.clearRect context 0 0 l w)))
-
-(defn tick [boids]
-  (go (loop [boids boids]
-        (<! (timeout frame-rate))
-
-        (let [boids (map (fn [bird] (-> bird
-                                      (update-heading boids)
-                                      (update-coords))) boids)]
-          (erase-canvas! context)
-          (doseq [bird boids]
-            (draw-bird! context bird))
-          (recur boids)))))
 
 (defn listen
   "DOM element -> channel."
@@ -227,9 +222,19 @@
 
 (handle-events)
 
+(defn tick [boids]
+  (go (loop [boids boids]
+        (<! (timeout frame-rate))
+
+        (let [boids (map (fn [bird] (-> bird
+                                      (update-heading boids)
+                                      (update-coords))) boids)]
+          (erase-canvas! context)
+          (doseq [bird boids]
+            (draw-bird! context bird))
+          (recur boids)))))
+
 (tick (for [n (range num-birds)]
         {:xy (mapv rand-int canvas-dimensions)
          :color "black"
-         :heading [(* n 10) (* n 10)]
-         :uid n
-         :speed 1000}))
+         :heading [(* n 10) (* n 10)]}))
