@@ -9,14 +9,13 @@
 (def canvas-dimensions [(.-width canvas)
                         (.-height canvas)])
 
-(def pixel-speed 3)
+(def frame-rate 0)
 (def timeout-amount 1)
 (def visible-range 200)
 (def num-birds 25)
 (def min-separation 30)
 (def default-inertia 100)
-(def inertia (atom 1) #_(atom default-inertia))
-(def boids (atom {}))
+(def inertia (atom default-inertia))
 (def goal (atom nil))
 (def obstacle (atom nil))
 (def obstacle-template {:xy [200 200] :radius 100})
@@ -182,28 +181,21 @@
                      (mapv #(/ % max-velocity) (mapv + velocity heading)))
          ))
 
-(defn register-bird!
-  [bird]
-  (swap! boids assoc (:uid bird) bird))
+(defn erase-canvas! [context]
+  (let [[l w] canvas-dimensions]
+    (.clearRect context 0 0 l w)))
 
-(defn animate-bird 
-  [context bird]
-  (go (loop [old-bird bird]
-        (let [new-bird (update-coords (update-heading old-bird
-                                                      (vals @boids)))]
-          (<! (timeout (/ timeout-amount (:speed old-bird))))  
-          (erase-bird! context old-bird)
-          (draw-bird! context new-bird)
-          (register-bird! new-bird)
-          (recur new-bird)))))
+(defn tick [boids]
+  (go (loop [boids boids]
+        (<! (timeout frame-rate))
 
-#_(defn animation-loop []
-  (go (while true
-        (<! (timeout 100))
-        (doseq [b @boids]
-          (erase-bird! context b)
-          (draw-bird! context b)))))
-
+        (let [boids (map (fn [bird] (-> bird
+                                      (update-heading boids)
+                                      (update-coords))) boids)]
+          (erase-canvas! context)
+          (doseq [bird boids]
+            (draw-bird! context bird))
+          (recur boids)))))
 
 (defn listen
   "DOM element -> channel."
@@ -232,15 +224,12 @@
                             (<! (timeout obstacle-timeout))
                             (erase-obstacle!)
                             (reset! obstacle nil))))))))))
-(doseq [n (range num-birds)]
-  (register-bird!
-    {:xy (mapv rand-int canvas-dimensions) 
-     :color "black" 
-     :heading [(* n 10) (* n 10)]
-     :uid n
-     :speed 1000}))
-
-(doseq [b @boids]
-  (animate-bird context (second b)))
 
 (handle-events)
+
+(tick (for [n (range num-birds)]
+        {:xy (mapv rand-int canvas-dimensions)
+         :color "black"
+         :heading [(* n 10) (* n 10)]
+         :uid n
+         :speed 1000}))
