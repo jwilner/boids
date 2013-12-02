@@ -146,17 +146,22 @@
       [0 0])
     [0 0]))
 
+(def behaviors [(partial if-empty-wrapper adhere-to-center)
+                (partial if-empty-wrapper maintain-separation)
+                (partial if-empty-wrapper align-direction)
+                obstacle-avoidance
+                go-for-goal])
+
 ;; bird functions
 
 (defn update-heading
   "bird, [list of birds] -> bird with new heading."
-  [{:keys [turn-funcs heading xy] :as bird} flock]
+  [{:keys [heading xy] :as bird} flock]
   (let [visible-birds (remove (partial = bird) 
                               (birds-within-radius bird 
                                                    flock 
                                                    visible-range))
-        list-of-new-headings (map #(% visible-birds bird)
-                                  turn-funcs)
+        list-of-new-headings (map #(% visible-birds bird) behaviors)
         new-heading (normalize-vector (apply sum-vectors 
                                              (mapv (partial * @inertia) heading)
                                              (remove empty? list-of-new-headings)))]
@@ -227,18 +232,11 @@
                             (<! (timeout obstacle-timeout))
                             (erase-obstacle!)
                             (reset! obstacle nil))))))))))
-
 (doseq [n (range num-birds)]
   (register-bird!
     {:xy (mapv rand-int canvas-dimensions) 
      :color "black" 
      :heading [(* n 10) (* n 10)]
-     :velocity [0 0]
-     :turn-funcs [(partial if-empty-wrapper adhere-to-center)
-                  (partial if-empty-wrapper maintain-separation)
-                  (partial if-empty-wrapper align-direction)
-                  obstacle-avoidance
-                  go-for-goal]
      :uid n
      :speed 1000}))
 
