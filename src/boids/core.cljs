@@ -6,14 +6,12 @@
 
 (def canvas (.getElementById js/document "sky"))
 (def context (.getContext canvas "2d"))
-(def canvas-dimensions [(.-width canvas)
-                        (.-height canvas)])
-
+(def canvas-dimensions [(.-width canvas) (.-height canvas)])
 (def frame-rate 0)
 (def timeout-amount 1)
-(def visible-range 200)
 (def pixel-speed 3)
 (def num-birds 25)
+(def visible-range 200)
 (def min-separation 30)
 (def default-inertia 100)
 (def inertia (atom default-inertia))
@@ -25,23 +23,24 @@
 (defn print-func [& x]
   (. js/console (log (apply str x))))
 
-;; canvas functions
+;; DRAWING
+
 (defn render-bird!
   [context bird color]
   (let [[x y] (:xy bird)]
     (set! (.-fillStyle context) color)
     (.fillRect context x y 5 5)))
 
-(defn draw-bird! 
+(defn draw-bird!
   [context bird]
   (render-bird! context bird (:color bird)))
 
-(defn erase-bird! 
+(defn erase-bird!
   [context bird]
   (let [[x y] (:xy bird)]
     (.clearRect context x y 5 5)))
 
-(defn render-obstacle! 
+(defn render-obstacle!
   [color]
   (let [{xy :xy radius :radius} @obstacle]
     (set! (.-strokeStyle context) color)
@@ -57,7 +56,12 @@
 
 (defn wrap [v] (mapv mod v canvas-dimensions))
 
-;; math ops
+(defn erase-canvas! [context]
+  (let [[l w] canvas-dimensions]
+    (.clearRect context 0 0 l w)))
+
+;; MATHS
+
 (defn distance
   "tuple tuple -> Number."
   [v1 v2]
@@ -65,7 +69,6 @@
        (mapv #(Math/pow % 2))
        (reduce +)
        (Math/sqrt)))
-
 
 (defn sum-vectors
   [& vecs]
@@ -78,7 +81,6 @@
         rooted (Math/sqrt summed)]
     (mapv #(/ % rooted) v)))
 
-;; turn func helpers
 (defn if-empty-wrapper
   [func neighbors bird]
   (if (empty? neighbors)
@@ -89,15 +91,17 @@
   [from to]
   (mapv - to from))
 
-(defn heading-to-dest 
+(defn heading-to-dest
   "bird dest -> heading."
   [{:keys [xy] :as bird} dest]
   (direction xy dest))
 
 (defn birds-within-radius
-  "bird [list of birds :as flock] Number -> [list of birds :as sub-flock]."
+  "Bird [List of birds] Number -> [List of birds].
+  Returns all the birds in the flock within a radius of the bird. Does not
+  include the bird itself."
   [{:keys [xy] :as bird} flock radius]
-  (filter #(< (distance xy (:xy %)) radius) flock))
+  (filter #(and (not= bird %) (< (distance xy (:xy %)) radius)) flock))
 
 (defn weighted-repulsion
   "tuple tuple int -> heading."
@@ -107,7 +111,8 @@
     (mapv (partial * repulse-weight)
           (direction repulse-location location))))
 
-; turn-funcs
+;; BEHAVIORS
+
 (defn adhere-to-center
   "[list of birds] bird -> heading."
   [neighbors bird]
@@ -116,14 +121,6 @@
                     (apply sum-vectors)
                     (mapv #(/ % (count neighbors))))]
     (heading-to-dest bird center)))
-
-#_(def adhere-to-center
-  (memoize (fn [neighbors bird]
-             (let [center (->> neighbors
-                            (map :xy)
-                            (apply sum-vectors)
-                            (mapv #(/ % (count neighbors))))]
-               (heading-to-dest bird center)))))
 
 (defn maintain-separation
   "Flock, bird -> heading."
@@ -164,21 +161,20 @@
 
 (def behaviors (map memoize [(partial if-empty-wrapper adhere-to-center)
                              (partial if-empty-wrapper align-direction)
-                             #_(partial if-empty-wrapper maintain-separation)
+                             (partial if-empty-wrapper maintain-separation)
                              obstacle-avoidance
                              go-for-goal]))
 
-;; bird functions
+;; BOID CONTROL
 
 (defn update-heading
   "bird, [list of birds] -> bird with new heading."
   [{:keys [heading xy] :as bird} flock]
-  (let [visible-birds (remove (partial = bird) 
-                              (birds-within-radius bird 
-                                                   flock 
-                                                   visible-range))
+  (let [visible-birds (birds-within-radius bird
+                                           flock
+                                           visible-range)
         list-of-new-headings (map #(% visible-birds bird) behaviors)
-        new-heading (normalize-vector (apply sum-vectors 
+        new-heading (normalize-vector (apply sum-vectors
                                              (mapv (partial * @inertia) heading)
                                              (remove empty? list-of-new-headings)))]
 
@@ -196,9 +192,7 @@
   (assoc bird :xy
          (wrap (mapv Math/round (sum-vectors xy heading)))))
 
-(defn erase-canvas! [context]
-  (let [[l w] canvas-dimensions]
-    (.clearRect context 0 0 l w)))
+;; EVENTS
 
 (defn listen
   "DOM element -> channel."
@@ -218,7 +212,7 @@
                             (reset! inertia (/ default-inertia 2)))
             "mouseout" (do (reset! goal nil)
                            (reset! inertia default-inertia))
-            "click" (go (do 
+            "click" (go (do
                           (let [xy [(.-clientX e) (.-clientY e)]]
                             (when-let [o @obstacle]
                               (erase-obstacle!))
@@ -230,7 +224,10 @@
 
 (handle-events)
 
-(defn tick [boids]
+;; WORLD TICKER
+
+(defn tick
+  [boids]
   (go (loop [boids boids]
         (<! (timeout frame-rate))
 
@@ -245,4 +242,5 @@
 (tick (for [n (range num-birds)]
         {:xy (mapv rand-int canvas-dimensions)
          :color "black"
+         :uid n
          :heading [(* n 10) (* n 10)]}))
