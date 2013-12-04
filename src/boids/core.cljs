@@ -1,7 +1,8 @@
 (ns boids.core
   (:use [cljs.core.async :only [<! >! timeout chan close! put!]])
   (:require [goog.dom :as dom]
-            [goog.events :as events])
+            [goog.events :as events]
+            [boids.vector :as v])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
 (def canvas (.getElementById js/document "sky"))
@@ -27,7 +28,7 @@
 
 (defn render-bird!
   [context bird color]
-  (let [[x y] (:xy bird)]
+  (let [[x y] (v/as-vec (:xy bird))]
     (set! (.-fillStyle context) color)
     (.fillRect context x y 5 5)))
 
@@ -64,11 +65,19 @@
 
 (defn distance
   "tuple tuple -> Number."
-  [v1 v2]
-  (->> (mapv - v1 v2)
+  [[v1 v2] [w1 w2]]
+  (Math/sqrt
+    (+ (Math/pow (- v1 w1) 2) (Math/pow (- v2 w2) 2)))
+  #_(->> (mapv - v1 v2)
        (mapv #(Math/pow % 2))
        (reduce +)
        (Math/sqrt)))
+
+(defn distance
+  "tuple tuple -> Number."
+  [[v1 v2] [w1 w2]]
+  (Math/sqrt
+    (+ (Math/pow (- v1 w1) 2) (Math/pow (- v2 w2) 2))))
 
 (defn sum-vectors
   [& vecs]
@@ -159,7 +168,7 @@
       [0 0])
     [0 0]))
 
-(def behaviors (map memoize [(partial if-empty-wrapper adhere-to-center)
+(def behaviors [] #_(map memoize [(partial if-empty-wrapper adhere-to-center)
                              (partial if-empty-wrapper align-direction)
                              (partial if-empty-wrapper maintain-separation)
                              obstacle-avoidance
@@ -231,7 +240,11 @@
   (go (loop [boids boids]
         (<! (timeout frame-rate))
 
-        (let [boids (map (fn [bird] (-> bird
+        (erase-canvas! context)
+        (doseq [bird boids]
+          (draw-bird! context bird))
+
+        #_(let [boids (map (fn [bird] (-> bird
                                       (update-heading boids)
                                       (update-coords))) boids)]
           (erase-canvas! context)
@@ -240,7 +253,7 @@
           (recur boids)))))
 
 (tick (for [n (range num-birds)]
-        {:xy (mapv rand-int canvas-dimensions)
+        {:xy (v/Vector2d. (rand-int (nth canvas-dimensions 0)) (rand-int (nth canvas-dimensions 1)))
          :color "black"
          :uid n
-         :heading [(* n 10) (* n 10)]}))
+         :heading (v/Vector2d. (* n 10) (* n 10))}))
