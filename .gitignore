@@ -9,3 +9,4 @@ pom.xml
 .nrepl-port
 /out/
 *.js
+*.swp
