@@ -67,7 +67,7 @@
 (defn if-empty-wrapper
   [func neighbors bird]
   (if (empty? neighbors)
-    [0 0]
+    (v/Vector2d. 0 0)
     (func neighbors bird)))
 
 (defn heading-to-dest
@@ -118,7 +118,7 @@
                 away-dirs "\n\t"
                 result)
 
-    (if (empty? result) [0 0] result)))
+    (if (empty? result) (v/Vector2d. 0 0) result)))
 
 (defn align-direction
   "Flock, bird -> heading."
@@ -142,7 +142,7 @@
     [0 0]))
 
 (def behaviors [(partial if-empty-wrapper adhere-to-center)
-                ;(partial if-empty-wrapper align-direction)
+                (partial if-empty-wrapper align-direction)
                 ;(partial if-empty-wrapper maintain-separation)
                 ;obstacle-avoidance
                 ;go-for-goal
@@ -155,10 +155,10 @@
   [{:keys [heading xy] :as bird} flock]
   (let [visible-birds (birds-within-radius bird flock visible-range)
         list-of-new-headings (map #(% visible-birds bird) behaviors)
-        new-heading (v/normalize heading)]
+        new-heading (v/normalize (reduce v/add list-of-new-headings))]
 
     ;; debug
-    (when (some #(js/isNaN (:x %)) list-of-new-headings)
+    #_(when (some #(js/isNaN (:x %)) list-of-new-headings)
       (render-bird! context bird "red")
       (print-func list-of-new-headings)
       (throw "BOOM"))
