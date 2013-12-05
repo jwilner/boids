@@ -30,7 +30,7 @@
 (defn render-bird!
   [context bird color]
   (set! (.-fillStyle context) color)
-  (.fillRect context (:x bird) (:y bird) 5 5))
+  (.fillRect context (:x (:xy bird)) (:y (:xy bird)) 5 5))
 
 (defn draw-bird!
   [context bird]
@@ -168,9 +168,7 @@
 (defn update-coords
   "bird -> bird with new xy coordinates and velocity."
   [{:keys [xy heading velocity] :as bird}]
-  (assoc bird :xy
-         (wrap (v/round (v/add xy heading)))
-         #_(wrap (mapv Math/round (v/add xy heading)))))
+  (assoc bird :xy (wrap (v/round (v/add xy heading)))))
 
 ;; EVENTS
 
