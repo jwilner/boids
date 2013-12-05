@@ -8,28 +8,38 @@
   (subt [this other] "Subtracts the 2nd from the 1st (coordinate-wise).")
   (distance [this other] "Euclidean distance between two SpatialVectors.")
   (length [this] "Distance to zero.")
+  (scale  [this l] "Scales the vector by a number l.")
   (normalize [this] "Divides a vector by its length, returning a vector of length = 1.")
+  (round [this] "Rounds the coordinates to the nearest Integer.")
   (wrap [this modulus-x modulus-y] "Mods the vector by modulus (coordinate-wise)."))
 
 (deftype Vector2d
   [x y]
   ISpatialVector
+  (as-vec [this] [x y])
   (add [this other]
-    (Vector2d. (+ (:x this) (x other)) (+ (:y this) (:y other))))
+    (Vector2d. (+ (:x this) (:x other)) (+ (:y this) (:y other))))
   (subt [this other]
     (Vector2d. (- (:x this) (:x other)) (- (:y this ) (:y other))))
-  (as-vec [this] [x y])
   (distance
     [this other]
     (Math/sqrt
-      (+ (square (- (nth this 0) (nth other 0)))
-         (square (- (nth this 1) (nth other 1))))))
+      (+ (square (- (:x this) (:x other)))
+         (square (- (:y this) (:y other))))))
   (length [this]
     (distance this (Vector2d. 0 0)))
-  (normalize [this] (let [l (length this)]
-      (Vector2d. (/ (:x this) l) (/ (:y this) l))))
+  (scale [this l]
+    (Vector2d. (* (:x this) l)
+               (* (:y this) l)))
+  (normalize [this]
+    (if (= 0 (length this))
+      this
+      (scale this (/ 1 (length this)))))
+  (round [this]
+    (Vector2d. (Math/round (:x this))
+               (Math/round (:y this))))
   (wrap [this modulus-x modulus-y]
-    (Vector2d. (mod (:x this) modulus-x) (mod (y this) modulus-y)))
+    (Vector2d. (mod (:x this) modulus-x) (mod (:y this) modulus-y)))
   ILookup
   (-lookup [this key default]
     (condp keyword-identical? key
@@ -42,6 +52,7 @@
       :y y
       nil)))
 
+;; TODO Implement the print interface
 (defn print-func [& x]
   (. js/console (log (apply str x))))
 

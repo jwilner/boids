@@ -3,7 +3,8 @@
   (:require [goog.dom :as dom]
             [goog.events :as events]
             [boids.vector :as v])
-  (:require-macros [cljs.core.async.macros :refer [go]]))
+  (:require-macros [cljs.core.async.macros :refer [go]]
+                   [boids.macros :refer [log]]))
 
 (def canvas (.getElementById js/document "sky"))
 (def context (.getContext canvas "2d"))
@@ -28,9 +29,8 @@
 
 (defn render-bird!
   [context bird color]
-  (let [[x y] (v/as-vec (:xy bird))]
-    (set! (.-fillStyle context) color)
-    (.fillRect context x y 5 5)))
+  (set! (.-fillStyle context) color)
+  (.fillRect context (:x bird) (:y bird) 5 5))
 
 (defn draw-bird!
   [context bird]
@@ -55,7 +55,8 @@
 (defn erase-obstacle! []
   (render-obstacle! "white"))
 
-(defn wrap [v] (mapv mod v canvas-dimensions))
+(defn wrap [v]
+  (v/wrap v (first canvas-dimensions) (second canvas-dimensions)))
 
 (defn erase-canvas! [context]
   (let [[l w] canvas-dimensions]
@@ -63,73 +64,45 @@
 
 ;; MATHS
 
-(defn distance
-  "tuple tuple -> Number."
-  [[v1 v2] [w1 w2]]
-  (Math/sqrt
-    (+ (Math/pow (- v1 w1) 2) (Math/pow (- v2 w2) 2)))
-  #_(->> (mapv - v1 v2)
-       (mapv #(Math/pow % 2))
-       (reduce +)
-       (Math/sqrt)))
-
-(defn distance
-  "tuple tuple -> Number."
-  [[v1 v2] [w1 w2]]
-  (Math/sqrt
-    (+ (Math/pow (- v1 w1) 2) (Math/pow (- v2 w2) 2))))
-
-(defn sum-vectors
-  [& vecs]
-  (apply mapv + vecs))
-
-(defn normalize-vector
-  [v]
-  (let [squared (mapv #(Math/pow % 2) v)
-        summed (reduce + squared)
-        rooted (Math/sqrt summed)]
-    (mapv #(/ % rooted) v)))
-
 (defn if-empty-wrapper
   [func neighbors bird]
   (if (empty? neighbors)
     [0 0]
     (func neighbors bird)))
 
-(defn direction
-  [from to]
-  (mapv - to from))
-
 (defn heading-to-dest
   "bird dest -> heading."
   [{:keys [xy] :as bird} dest]
-  (direction xy dest))
+  (v/subt dest xy))
 
 (defn birds-within-radius
   "Bird [List of birds] Number -> [List of birds].
   Returns all the birds in the flock within a radius of the bird. Does not
   include the bird itself."
   [{:keys [xy] :as bird} flock radius]
-  (filter #(and (not= bird %) (< (distance xy (:xy %)) radius)) flock))
+  (filter #(and (not= bird %) (< (v/distance xy (:xy %)) radius)) flock))
 
 (defn weighted-repulsion
   "tuple tuple int -> heading."
   [repulse-location location radius]
-  (let [d (distance location repulse-location)
+  (let [d (v/distance location repulse-location)
         repulse-weight (/ radius (if (zero? d) 0.001 d))]
-    (mapv (partial * repulse-weight)
-          (direction repulse-location location))))
+    (map #(v/scale % repulse-weight)
+          (v/subt location repulse-location))))
 
 ;; BEHAVIORS
 
 (defn adhere-to-center
   "[list of birds] bird -> heading."
-  [neighbors bird]
-  (let [center (->> neighbors
-                    (map :xy)
-                    (apply sum-vectors)
-                    (mapv #(/ % (count neighbors))))]
-    (heading-to-dest bird center)))
+  ([neighbors bird]
+   (adhere-to-center neighbors bird (v/Vector2d. 0 0) 0))
+  ([neighbors bird avg n]
+   (if (empty? neighbors)
+     avg
+     (recur (rest neighbors) bird
+            (v/scale (v/add (v/scale avg n) (:xy (first neighbors)))
+                     (/ 1 (inc n)))
+            (inc n)))))
 
 (defn maintain-separation
   "Flock, bird -> heading."
@@ -137,9 +110,9 @@
   (let [weighted-away-dir (fn [bird] (weighted-repulsion (:xy bird) xy min-separation))
         birds-too-close (birds-within-radius bird flock min-separation)
         away-dirs (map weighted-away-dir birds-too-close)
-        result (apply sum-vectors away-dirs)]
+        result (reduce v/add away-dirs)]
 
-    #_(print-func "maintain-separation" "\n\t"
+    (print-func "maintain-separation" "\n\t"
                 birds-too-close "\n\t"
                 weighted-away-dir "\n\t"
                 away-dirs "\n\t"
@@ -150,7 +123,7 @@
 (defn align-direction
   "Flock, bird -> heading."
   [flock bird]
-  (apply sum-vectors (map :heading flock)))
+  (reduce v/add (map :heading flock)))
 
 (defn go-for-goal
   "Flock (ignored), bird -> heading."
@@ -163,43 +136,41 @@
   [_ bird]
   "Flock (ignored), bird -> heading."
   (if-let [{xy :xy radius :radius}  @obstacle]
-    (if (< (distance xy (:xy bird)) radius)
-      (mapv (partial * 100) (weighted-repulsion xy (:xy bird) radius))
+    (if (< (v/distance xy (:xy bird)) radius)
+      (v/scale (weighted-repulsion xy (:xy bird) radius) 100)
       [0 0])
     [0 0]))
 
-(def behaviors [] #_(map memoize [(partial if-empty-wrapper adhere-to-center)
-                             (partial if-empty-wrapper align-direction)
-                             (partial if-empty-wrapper maintain-separation)
-                             obstacle-avoidance
-                             go-for-goal]))
+(def behaviors [(partial if-empty-wrapper adhere-to-center)
+                ;(partial if-empty-wrapper align-direction)
+                ;(partial if-empty-wrapper maintain-separation)
+                ;obstacle-avoidance
+                ;go-for-goal
+                ])
 
 ;; BOID CONTROL
 
 (defn update-heading
   "bird, [list of birds] -> bird with new heading."
   [{:keys [heading xy] :as bird} flock]
-  (let [visible-birds (birds-within-radius bird
-                                           flock
-                                           visible-range)
+  (let [visible-birds (birds-within-radius bird flock visible-range)
         list-of-new-headings (map #(% visible-birds bird) behaviors)
-        new-heading (normalize-vector (apply sum-vectors
-                                             (mapv (partial * @inertia) heading)
-                                             (remove empty? list-of-new-headings)))]
+        new-heading (v/normalize heading)]
 
     ;; debug
-    (when (some #(js/isNaN (first %)) list-of-new-headings)
+    (when (some #(js/isNaN (:x %)) list-of-new-headings)
       (render-bird! context bird "red")
       (print-func list-of-new-headings)
       (throw "BOOM"))
 
-    (assoc bird :heading (mapv (partial * pixel-speed) new-heading))))
+    (assoc bird :heading (v/scale new-heading pixel-speed))))
 
 (defn update-coords
   "bird -> bird with new xy coordinates and velocity."
   [{:keys [xy heading velocity] :as bird}]
   (assoc bird :xy
-         (wrap (mapv Math/round (sum-vectors xy heading)))))
+         (wrap (v/round (v/add xy heading)))
+         #_(wrap (mapv Math/round (v/add xy heading)))))
 
 ;; EVENTS
 
@@ -244,7 +215,7 @@
         (doseq [bird boids]
           (draw-bird! context bird))
 
-        #_(let [boids (map (fn [bird] (-> bird
+        (let [boids (map (fn [bird] (-> bird
                                       (update-heading boids)
                                       (update-coords))) boids)]
           (erase-canvas! context)
