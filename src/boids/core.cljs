@@ -14,7 +14,7 @@
 (def pixel-speed 3)
 (def num-birds 25)
 (def visible-range 200)
-(def min-separation 30)
+(def min-separation 10)
 (def default-inertia 100)
 (def inertia (atom default-inertia))
 (def goal (atom nil))
@@ -67,7 +67,7 @@
 (defn if-empty-wrapper
   [func neighbors bird]
   (if (empty? neighbors)
-    [0 0]
+    (v/Vector2d. 0 0)
     (func neighbors bird)))
 
 (defn heading-to-dest
@@ -98,7 +98,7 @@
    (adhere-to-center neighbors bird (v/Vector2d. 0 0) 0))
   ([neighbors bird avg n]
    (if (empty? neighbors)
-     avg
+     (v/normalize avg)
      (recur (rest neighbors) bird
             (v/scale (v/add (v/scale avg n) (:xy (first neighbors)))
                      (/ 1 (inc n)))
@@ -118,12 +118,12 @@
                 away-dirs "\n\t"
                 result)
 
-    (if (empty? result) [0 0] result)))
+    (if (empty? result) (v/Vector2d. 0 0) result)))
 
 (defn align-direction
   "Flock, bird -> heading."
   [flock bird]
-  (reduce v/add (map :heading flock)))
+  (v/normalize (reduce v/add (map :heading flock))))
 
 (defn go-for-goal
   "Flock (ignored), bird -> heading."
@@ -141,7 +141,7 @@
       [0 0])
     [0 0]))
 
-(def behaviors [(partial if-empty-wrapper adhere-to-center)
+#_(def behaviors [(partial if-empty-wrapper adhere-to-center)
                 ;(partial if-empty-wrapper align-direction)
                 ;(partial if-empty-wrapper maintain-separation)
                 ;obstacle-avoidance
@@ -154,11 +154,11 @@
   "bird, [list of birds] -> bird with new heading."
   [{:keys [heading xy] :as bird} flock]
   (let [visible-birds (birds-within-radius bird flock visible-range)
-        list-of-new-headings (map #(% visible-birds bird) behaviors)
-        new-heading (v/normalize heading)]
+        list-of-new-headings (map #(% :heading) visible-birds)  #_(map #(% visible-birds bird) behaviors)
+        new-heading (v/normalize (reduce v/add list-of-new-headings))]
 
     ;; debug
-    (when (some #(js/isNaN (:x %)) list-of-new-headings)
+    #_(when (some #(js/isNaN (:x %)) list-of-new-headings)
       (render-bird! context bird "red")
       (print-func list-of-new-headings)
       (throw "BOOM"))
@@ -168,7 +168,7 @@
 (defn update-coords
   "bird -> bird with new xy coordinates and velocity."
   [{:keys [xy heading velocity] :as bird}]
-  (assoc bird :xy (wrap (v/round (v/add xy heading)))))
+  (assoc bird :xy (wrap (v/add xy heading))))
 
 ;; EVENTS
 

@@ -10,7 +10,6 @@
   (length [this] "Distance to zero.")
   (scale  [this l] "Scales the vector by a number l.")
   (normalize [this] "Divides a vector by its length, returning a vector of length = 1.")
-  (round [this] "Rounds the coordinates to the nearest Integer.")
   (wrap [this modulus-x modulus-y] "Mods the vector by modulus (coordinate-wise)."))
 
 (deftype Vector2d
@@ -35,11 +34,8 @@
     (if (= 0 (length this))
       this
       (scale this (/ 1 (length this)))))
-  (round [this]
-    (Vector2d. (Math/round (:x this))
-               (Math/round (:y this))))
   (wrap [this modulus-x modulus-y]
-    (Vector2d. (mod (:x this) modulus-x) (mod (:y this) modulus-y)))
+    (Vector2d. (mod (Math/round (:x this)) modulus-x) (mod (Math/round (:y this)) modulus-y)))
   ILookup
   (-lookup [this key default]
     (condp keyword-identical? key
