@@ -3,8 +3,7 @@
   (:require [goog.dom :as dom]
             [goog.events :as events]
             [boids.vector :as v])
-  (:require-macros [cljs.core.async.macros :refer [go]]
-                   [boids.macros :refer [log]]))
+  (:require-macros [cljs.core.async.macros :refer [go]]))
 
 (def canvas (.getElementById js/document "sky"))
 (def context (.getContext canvas "2d"))
@@ -96,13 +95,13 @@
   "[list of birds] bird -> heading."
   ([neighbors bird]
    (adhere-to-center neighbors bird (v/Vector2d. 0 0) 0))
-  ([neighbors bird avg n]
+  ([neighbors bird avg birds-seen]
    (if (empty? neighbors)
      (v/normalize avg)
      (recur (rest neighbors) bird
-            (v/scale (v/add (v/scale avg n) (:xy (first neighbors)))
-                     (/ 1 (inc n)))
-            (inc n)))))
+            (v/scale (v/add (v/scale avg birds-seen) (:xy (first neighbors)))
+                     (/ 1 (inc birds-seen)))
+            (inc birds-seen)))))
 
 (defn maintain-separation
   "Flock, bird -> heading."
@@ -141,7 +140,7 @@
       [0 0])
     [0 0]))
 
-#_(def behaviors [(partial if-empty-wrapper adhere-to-center)
+(def behaviors [(partial if-empty-wrapper adhere-to-center)
                 ;(partial if-empty-wrapper align-direction)
                 ;(partial if-empty-wrapper maintain-separation)
                 ;obstacle-avoidance
@@ -154,7 +153,7 @@
   "bird, [list of birds] -> bird with new heading."
   [{:keys [heading xy] :as bird} flock]
   (let [visible-birds (birds-within-radius bird flock visible-range)
-        list-of-new-headings (map #(% :heading) visible-birds)  #_(map #(% visible-birds bird) behaviors)
+        list-of-new-headings (map #(% visible-birds bird) behaviors)
         new-heading (v/normalize (reduce v/add list-of-new-headings))]
 
     ;; debug
@@ -163,7 +162,7 @@
       (print-func list-of-new-headings)
       (throw "BOOM"))
 
-    (assoc bird :heading (v/scale new-heading pixel-speed))))
+    (assoc bird :heading (v/add heading (v/normalize new-heading)))))
 
 (defn update-coords
   "bird -> bird with new xy coordinates and velocity."
@@ -222,7 +221,8 @@
           (recur boids)))))
 
 (tick (for [n (range num-birds)]
-        {:xy (v/Vector2d. (rand-int (nth canvas-dimensions 0)) (rand-int (nth canvas-dimensions 1)))
+        {:xy (v/Vector2d. (rand-int (nth canvas-dimensions 0))
+                          (rand-int (nth canvas-dimensions 1)))
          :color "black"
          :uid n
-         :heading (v/Vector2d. (* n 10) (* n 10))}))
+         :heading (v/Vector2d. 0 0)}))
