@@ -45,7 +45,7 @@
     (set! (.-strokeStyle context) color)
     (.beginPath context)
     (.arc context (:x xy) (:y xy) (- radius 20) 0 (* 2 Math/PI))
-    (.stroke context)))
+    (.fill context)))
 
 (defn draw-obstacle! []
   (render-obstacle! "black"))
@@ -188,13 +188,9 @@
             "click" (go (do
                           (let [x (.-clientX e)
                                 y (.-clientY e)]
-                            (when-let [o @obstacle]
-                              (erase-obstacle!))
                             (reset! obstacle (assoc obstacle-template
                                                     :xy (v/Vector2d. x y)))
-                            (draw-obstacle!)
                             (<! (timeout obstacle-timeout))
-                            (erase-obstacle!)
                             (reset! obstacle nil))))))))))
 
 (handle-events)
@@ -205,7 +201,6 @@
   [boids]
   (go (loop [boids boids]
         (<! (timeout timeout-ms))
-
         (erase-canvas! context)
         (doseq [bird boids]
           (draw-bird! context bird))
@@ -214,6 +209,8 @@
                                       (update-heading boids)
                                       (update-coords))) boids)]
           (erase-canvas! context)
+          (when-let [o @obstacle]
+            (draw-obstacle!))
           (doseq [bird boids]
             (draw-bird! context bird))
           (recur boids)))))
