@@ -8,11 +8,12 @@
 (def canvas (.getElementById js/document "sky"))
 (def context (.getContext canvas "2d"))
 (def canvas-dimensions [(.-width canvas) (.-height canvas)])
-(def timeout-ms 1)
+(def timeout-ms 10)
 (def num-birds 25)
 (def visible-range 200)
-(def min-separation 10)
-(def default-inertia 100)
+(def max-heading-len 5)
+(def min-separation 20)
+(def default-inertia 10)
 (def inertia (atom default-inertia))
 (def goal (atom nil))
 (def obstacle (atom nil))
@@ -117,7 +118,8 @@
 (defn align-heading
   "Flock, bird -> heading."
   [flock bird]
-  (v/normalize (v/sum (map :heading flock))))
+  (v/scale (v/sum (map :heading flock))
+           (count flock)))
 
 (defn go-for-goal
   "Flock (ignored), bird -> heading."
@@ -157,7 +159,7 @@
       (print-func list-of-new-headings)
       (throw "BOOM"))
 
-    (assoc bird :heading (v/normalize (v/add heading new-heading)))))
+    (assoc bird :heading (v/ceil (v/add heading new-heading) max-heading-len))))
 
 (defn update-coords
   "bird -> bird with new xy coordinates and velocity."
