@@ -202,18 +202,13 @@
   (go (loop [boids boids]
         (<! (timeout timeout-ms))
         (erase-canvas! context)
+        (when-let [o @obstacle]
+          (draw-obstacle!))
         (doseq [bird boids]
           (draw-bird! context bird))
-
-        (let [boids (map (fn [bird] (-> bird
+        (recur (map (fn [bird] (-> bird
                                       (update-heading boids)
-                                      (update-coords))) boids)]
-          (erase-canvas! context)
-          (when-let [o @obstacle]
-            (draw-obstacle!))
-          (doseq [bird boids]
-            (draw-bird! context bird))
-          (recur boids)))))
+                                      (update-coords))) boids)))))
 
 (defn sign [] (if (< (rand) .5) -1 1))
 
