@@ -8,9 +8,7 @@
 (def canvas (.getElementById js/document "sky"))
 (def context (.getContext canvas "2d"))
 (def canvas-dimensions [(.-width canvas) (.-height canvas)])
-(def frame-rate 0)
-(def timeout-amount 1)
-(def pixel-speed 3)
+(def timeout-ms 1)
 (def num-birds 25)
 (def visible-range 200)
 (def min-separation 10)
@@ -93,15 +91,12 @@
 
 (defn adhere-to-center
   "[list of birds] bird -> heading."
-  ([neighbors bird]
-   (adhere-to-center neighbors bird (v/Vector2d. 0 0) 0))
-  ([neighbors bird avg birds-seen]
-   (if (empty? neighbors)
-     (v/normalize avg)
-     (recur (rest neighbors) bird
-            (v/scale (v/add (v/scale avg birds-seen) (:xy (first neighbors)))
-                     (/ 1 (inc birds-seen)))
-            (inc birds-seen)))))
+  [neighbors bird]
+  (heading-to-dest
+    bird
+    (v/scale
+      (reduce v/add v/origin (map :xy neighbors))
+      (/ 1 (count neighbors)))))
 
 (defn maintain-separation
   "Flock, bird -> heading."
@@ -140,8 +135,8 @@
       [0 0])
     [0 0]))
 
-(def behaviors [;(partial if-empty-wrapper adhere-to-center)
-                (partial if-empty-wrapper align-heading)
+(def behaviors [(partial if-empty-wrapper adhere-to-center)
+                ;(partial if-empty-wrapper align-heading)
                 ;(partial if-empty-wrapper maintain-separation)
                 ;obstacle-avoidance
                 ;go-for-goal
@@ -206,7 +201,7 @@
 (defn tick
   [boids]
   (go (loop [boids boids]
-        (<! (timeout frame-rate))
+        (<! (timeout timeout-ms))
 
         (erase-canvas! context)
         (doseq [bird boids]
