@@ -10,7 +10,7 @@
   (length [this] "Distance to zero.")
   (scale  [this l] "Scales the vector by a number l.")
   (normalize [this] "Divides a vector by its length, returning a vector of length = 1.")
-  (floor [this maximum] "If the length of this > maximum, then scale this to maximum.")
+  (ceil [this maximum] "If the length of this > maximum, then scale this to maximum.")
   (wrap [this modulus-x modulus-y] "Mods the vector by modulus (coordinate-wise)."))
 
 (deftype Vector2d
@@ -35,7 +35,7 @@
     (if (= 0 (length this))
       this
       (scale this (/ 1 (length this)))))
-  (floor [this max]
+  (ceil [this max]
     (if (< max (length this))
       (scale this (/ max (length this)))
       this))
@@ -129,10 +129,10 @@
 ;; sum
 (eq-test origin (sum [origin origin origin]))
 
-;; floor
+;; ceil
 
-(assert (= 4 (length (floor (Vector2d. 3 4) 4))))
+(assert (= 4 (length (ceil (Vector2d. 3 4) 4))))
 (eq-test (Vector2d. 3 4)
-         (floor (Vector2d. 3 4) 5))
+         (ceil (Vector2d. 3 4) 5))
 (eq-test (Vector2d. 3 4)
-         (floor (Vector2d. 3 4) 6))
+         (ceil (Vector2d. 3 4) 6))
