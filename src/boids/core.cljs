@@ -140,7 +140,7 @@
       [0 0])
     [0 0]))
 
-(def behaviors [(partial if-empty-wrapper adhere-to-center)
+(def behaviors [;(partial if-empty-wrapper adhere-to-center)
                 ;(partial if-empty-wrapper align-direction)
                 ;(partial if-empty-wrapper maintain-separation)
                 ;obstacle-avoidance
@@ -154,7 +154,7 @@
   [{:keys [heading xy] :as bird} flock]
   (let [visible-birds (birds-within-radius bird flock visible-range)
         list-of-new-headings (map #(% visible-birds bird) behaviors)
-        new-heading (v/normalize (reduce v/add list-of-new-headings))]
+        new-heading (v/normalize (reduce v/add v/origin list-of-new-headings))]
 
     ;; debug
     #_(when (some #(js/isNaN (:x %)) list-of-new-headings)
@@ -225,4 +225,4 @@
                           (rand-int (nth canvas-dimensions 1)))
          :color "black"
          :uid n
-         :heading (v/Vector2d. 0 0)}))
+         :heading v/origin}))
