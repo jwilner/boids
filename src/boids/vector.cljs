@@ -10,6 +10,7 @@
   (length [this] "Distance to zero.")
   (scale  [this l] "Scales the vector by a number l.")
   (normalize [this] "Divides a vector by its length, returning a vector of length = 1.")
+  (floor [this maximum] "If the length of this > maximum, then scale this to maximum.")
   (wrap [this modulus-x modulus-y] "Mods the vector by modulus (coordinate-wise)."))
 
 (deftype Vector2d
@@ -34,6 +35,10 @@
     (if (= 0 (length this))
       this
       (scale this (/ 1 (length this)))))
+  (floor [this max]
+    (if (< max (length this))
+      (scale this (/ max (length this)))
+      this))
   (wrap [this modulus-x modulus-y]
     (Vector2d. (mod (Math/round (:x this)) modulus-x) (mod (Math/round (:y this)) modulus-y)))
   ILookup
@@ -56,6 +61,8 @@
   [vector2d]
   (print-func (as-vec vector2d)))
 
+(def origin (Vector2d. 0 0))
+
 (defn sum
   [coll]
   (reduce add origin coll))
@@ -71,8 +78,6 @@
              (as-vec v2)))
     (catch js/Error e
       (print-func (as-vec v1) (as-vec v2)))))
-
-(def origin (Vector2d. 0 0))
 
 ;; add
 
@@ -122,5 +127,12 @@
          (wrap (Vector2d. 11 11) 10 10))
 
 ;; sum
-(sum [origin origin origin])
 (eq-test origin (sum [origin origin origin]))
+
+;; floor
+
+(assert (= 4 (length (floor (Vector2d. 3 4) 4))))
+(eq-test (Vector2d. 3 4)
+         (floor (Vector2d. 3 4) 5))
+(eq-test (Vector2d. 3 4)
+         (floor (Vector2d. 3 4) 6))
