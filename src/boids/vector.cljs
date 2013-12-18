@@ -55,3 +55,65 @@
 (defn printv
   [vector2d]
   (print-func (as-vec vector2d)))
+
+
+;;
+;; TESTS
+;;
+
+(defn eq-test
+  [v1 v2]
+  (try
+  (assert (= (as-vec v1)
+             (as-vec v2)))
+    (catch js/Error e
+      (print-func (as-vec v1) (as-vec v2)))))
+
+(def origin (Vector2d. 0 0))
+
+;; add
+
+(eq-test (Vector2d. 42 12)
+         (add (Vector2d. 0 0) (Vector2d. 42 12)))
+(eq-test origin
+         (add (Vector2d. -1 -2) (Vector2d. 1 2)))
+
+;; subt
+
+(eq-test (Vector2d. 1 0) (subt
+                           (Vector2d. 2 2) (Vector2d. 1 2)))
+(eq-test (Vector2d. -1 0) (subt
+                           (Vector2d. 1 2) (Vector2d. 2 2)))
+
+;; distance
+
+(assert (= 5
+           (distance origin (Vector2d. 3 4))))
+(assert (= 5
+           (distance origin (Vector2d. -3 4))))
+(assert (= 5
+           (distance origin (Vector2d. 3 -4))))
+(assert (= 5
+           (distance (Vector2d. 6 8) (Vector2d. 3 4))))
+
+;; length
+
+(assert (= (Math/sqrt 34) (length (Vector2d. 3 5))))
+
+;; scale
+
+(eq-test (Vector2d. 1 1) (scale (Vector2d. 4 4) 0.25))
+
+;; normalize
+
+(eq-test (Vector2d. (/ 1 (Math/sqrt 2)) (/ 1 (Math/sqrt 2)))
+         (normalize (Vector2d. 1 1)))
+
+;; wrap
+
+(eq-test (Vector2d. 5 5)
+         (wrap (Vector2d. 5 5) 10 10))
+(eq-test origin
+         (wrap (Vector2d. 10 10) 10 10))
+(eq-test (Vector2d. 1 1)
+         (wrap (Vector2d. 11 11) 10 10))
