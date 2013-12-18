@@ -8,10 +8,10 @@
 (def canvas (.getElementById js/document "sky"))
 (def context (.getContext canvas "2d"))
 (def canvas-dimensions [(.-width canvas) (.-height canvas)])
-(def timeout-ms 10)
+(def timeout-ms 8)
 (def num-birds 25)
 (def visible-range 200)
-(def max-heading-len 5)
+(def max-heading-len 3)
 (def min-separation 20)
 (def default-inertia 10)
 (def inertia (atom default-inertia))
@@ -217,9 +217,12 @@
             (draw-bird! context bird))
           (recur boids)))))
 
+(defn sign [] (if (< (rand) .5) -1 1))
+
 (tick (for [n (range num-birds)]
-        {:xy (v/Vector2d. (rand-int (nth canvas-dimensions 0))
-                          (rand-int (nth canvas-dimensions 1)))
+        {:xy (v/Vector2d. (rand-int (first canvas-dimensions))
+                          (rand-int (second canvas-dimensions)))
          :color "black"
          :uid n
-         :heading (v/Vector2d. (rand-int 1000) (rand-int 1000))}))
+         :heading (v/Vector2d. (* (sign) (rand-int (first canvas-dimensions)))
+                               (* (sign) (rand-int (second canvas-dimensions))))}))
