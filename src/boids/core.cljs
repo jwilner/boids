@@ -17,7 +17,7 @@
 (def inertia (atom default-inertia))
 (def goal (atom nil))
 (def obstacle (atom nil))
-(def obstacle-template {:xy [200 200] :radius 100})
+(def obstacle-template {:xy (v/Vector2d. 200 200) :radius 100})
 (def obstacle-timeout 10000)
 
 (defn print-func [& x]
@@ -44,7 +44,7 @@
   (let [{xy :xy radius :radius} @obstacle]
     (set! (.-strokeStyle context) color)
     (.beginPath context)
-    (.arc context (first xy) (second xy) (- radius 20) 0 (* 2 Math/PI))
+    (.arc context (:x xy) (:y xy) (- radius 20) 0 (* 2 Math/PI))
     (.stroke context)))
 
 (defn draw-obstacle! []
@@ -108,10 +108,10 @@
         result (v/sum away-dirs)]
 
     #_(print-func "DEBUG maintain-separation" "\n\t"
-                birds-too-close "\n\t"
-                weighted-away-dir "\n\t"
-                away-dirs "\n\t"
-                result)
+                  birds-too-close "\n\t"
+                  weighted-away-dir "\n\t"
+                  away-dirs "\n\t"
+                  result)
 
     result))
 
@@ -126,7 +126,7 @@
   [_ bird]
   (if-let [g @goal]
     (heading-to-dest bird g)
-    [0 0]))
+    v/origin))
 
 (defn obstacle-avoidance
   [_ bird]
@@ -134,15 +134,14 @@
   (if-let [{xy :xy radius :radius}  @obstacle]
     (if (< (v/distance xy (:xy bird)) radius)
       (v/scale (weighted-repulsion xy (:xy bird) radius) 100)
-      [0 0])
-    [0 0]))
+      v/origin)
+    v/origin))
 
 (def behaviors [(partial if-empty-wrapper adhere-to-center)
                 (partial if-empty-wrapper align-heading)
                 (partial if-empty-wrapper maintain-separation)
-                ;obstacle-avoidance
-                ;go-for-goal
-                ])
+                obstacle-avoidance
+                go-for-goal])
 
 ;; BOID CONTROL
 
@@ -155,9 +154,9 @@
 
     ;; debug
     #_(when (some #(js/isNaN (:x %)) list-of-new-headings)
-      (render-bird! context bird "red")
-      (print-func list-of-new-headings)
-      (throw "BOOM"))
+        (render-bird! context bird "red")
+        (print-func list-of-new-headings)
+        (throw "BOOM"))
 
     (assoc bird :heading (v/ceil (v/add heading new-heading) max-heading-len))))
 
@@ -181,16 +180,18 @@
       (while true
         (let [e (<! events)
               t (.-type e)]
-          (condp = t
-            "mousemove" (do (reset! goal [(.-clientX e) (.-clientY e)])
+          (case t
+            "mousemove" (do (reset! goal (v/Vector2d. (.-clientX e) (.-clientY e)))
                             (reset! inertia (/ default-inertia 2)))
             "mouseout" (do (reset! goal nil)
                            (reset! inertia default-inertia))
             "click" (go (do
-                          (let [xy [(.-clientX e) (.-clientY e)]]
+                          (let [x (.-clientX e)
+                                y (.-clientY e)]
                             (when-let [o @obstacle]
                               (erase-obstacle!))
-                            (reset! obstacle (assoc obstacle-template :xy xy))
+                            (reset! obstacle (assoc obstacle-template
+                                                    :xy (v/Vector2d. x y)))
                             (draw-obstacle!)
                             (<! (timeout obstacle-timeout))
                             (erase-obstacle!)
