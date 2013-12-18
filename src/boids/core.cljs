@@ -119,7 +119,7 @@
 
     (if (empty? result) (v/Vector2d. 0 0) result)))
 
-(defn align-direction
+(defn align-heading
   "Flock, bird -> heading."
   [flock bird]
   (v/normalize (reduce v/add (map :heading flock))))
@@ -141,7 +141,7 @@
     [0 0]))
 
 (def behaviors [;(partial if-empty-wrapper adhere-to-center)
-                ;(partial if-empty-wrapper align-direction)
+                (partial if-empty-wrapper align-heading)
                 ;(partial if-empty-wrapper maintain-separation)
                 ;obstacle-avoidance
                 ;go-for-goal
@@ -162,7 +162,7 @@
       (print-func list-of-new-headings)
       (throw "BOOM"))
 
-    (assoc bird :heading (v/add heading (v/normalize new-heading)))))
+    (assoc bird :heading (v/normalize (v/add heading new-heading)))))
 
 (defn update-coords
   "bird -> bird with new xy coordinates and velocity."
@@ -225,4 +225,4 @@
                           (rand-int (nth canvas-dimensions 1)))
          :color "black"
          :uid n
-         :heading v/origin}))
+         :heading (v/Vector2d. (rand-int 1000) (rand-int 1000))}))
