@@ -84,8 +84,8 @@
   [repulse-location location radius]
   (let [d (v/distance location repulse-location)
         repulse-weight (/ radius (if (zero? d) 0.001 d))]
-    (map #(v/scale % repulse-weight)
-          (v/subt location repulse-location))))
+    (v/scale
+      (v/subt location repulse-location) repulse-weight)))
 
 ;; BEHAVIORS
 
@@ -106,7 +106,7 @@
         away-dirs (map weighted-away-dir birds-too-close)
         result (v/sum away-dirs)]
 
-    (print-func "DEBUG maintain-separation" "\n\t"
+    #_(print-func "DEBUG maintain-separation" "\n\t"
                 birds-too-close "\n\t"
                 weighted-away-dir "\n\t"
                 away-dirs "\n\t"
