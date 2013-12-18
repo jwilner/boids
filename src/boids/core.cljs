@@ -95,7 +95,7 @@
   (heading-to-dest
     bird
     (v/scale
-      (reduce v/add v/origin (map :xy neighbors))
+      (v/sum (map :xy neighbors))
       (/ 1 (count neighbors)))))
 
 (defn maintain-separation
@@ -104,20 +104,20 @@
   (let [weighted-away-dir (fn [bird] (weighted-repulsion (:xy bird) xy min-separation))
         birds-too-close (birds-within-radius bird flock min-separation)
         away-dirs (map weighted-away-dir birds-too-close)
-        result (reduce v/add away-dirs)]
+        result (v/sum away-dirs)]
 
-    (print-func "maintain-separation" "\n\t"
+    (print-func "DEBUG maintain-separation" "\n\t"
                 birds-too-close "\n\t"
                 weighted-away-dir "\n\t"
                 away-dirs "\n\t"
                 result)
 
-    (if (empty? result) (v/Vector2d. 0 0) result)))
+    result))
 
 (defn align-heading
   "Flock, bird -> heading."
   [flock bird]
-  (v/normalize (reduce v/add (map :heading flock))))
+  (v/normalize (v/sum (map :heading flock))))
 
 (defn go-for-goal
   "Flock (ignored), bird -> heading."
@@ -136,8 +136,8 @@
     [0 0]))
 
 (def behaviors [(partial if-empty-wrapper adhere-to-center)
-                ;(partial if-empty-wrapper align-heading)
-                ;(partial if-empty-wrapper maintain-separation)
+                (partial if-empty-wrapper align-heading)
+                (partial if-empty-wrapper maintain-separation)
                 ;obstacle-avoidance
                 ;go-for-goal
                 ])
@@ -149,7 +149,7 @@
   [{:keys [heading xy] :as bird} flock]
   (let [visible-birds (birds-within-radius bird flock visible-range)
         list-of-new-headings (map #(% visible-birds bird) behaviors)
-        new-heading (v/normalize (reduce v/add v/origin list-of-new-headings))]
+        new-heading (v/normalize (v/sum list-of-new-headings))]
 
     ;; debug
     #_(when (some #(js/isNaN (:x %)) list-of-new-headings)

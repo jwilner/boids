@@ -56,6 +56,9 @@
   [vector2d]
   (print-func (as-vec vector2d)))
 
+(defn sum
+  [coll]
+  (reduce add origin coll))
 
 ;;
 ;; TESTS
@@ -117,3 +120,7 @@
          (wrap (Vector2d. 10 10) 10 10))
 (eq-test (Vector2d. 1 1)
          (wrap (Vector2d. 11 11) 10 10))
+
+;; sum
+(sum [origin origin origin])
+(eq-test origin (sum [origin origin origin]))
