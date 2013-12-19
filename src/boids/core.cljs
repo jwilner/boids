@@ -53,12 +53,6 @@
 (defn wrap [v]
   (v/wrap v (first canvas-dimensions) (second canvas-dimensions)))
 
-(defn if-empty-wrapper
-  [func neighbors bird]
-  (if (empty? neighbors)
-    (v/Vector2d. 0 0)
-    (func neighbors bird)))
-
 (defn heading-to-dest
   "bird dest -> heading."
   [{:keys [xy] :as bird} dest]
@@ -84,11 +78,13 @@
 (defn adhere-to-center
   "[list of birds] bird -> heading."
   [neighbors bird]
-  (heading-to-dest
-    bird
-    (v/scale
-      (v/sum (map :xy neighbors))
-      (/ 1 (count neighbors)))))
+  (if (empty? neighbors)
+    v/origin
+    (heading-to-dest
+      bird
+      (v/scale
+        (v/sum (map :xy neighbors))
+        (/ 1 (count neighbors))))))
 
 (defn maintain-separation
   "Flock, bird -> heading."
@@ -109,8 +105,10 @@
 (defn align-heading
   "Flock, bird -> heading."
   [flock bird]
-  (v/scale (v/sum (map :heading flock))
-           (count flock)))
+  (if (empty? flock)
+    v/origin
+    (v/scale (v/sum (map :heading flock))
+             (count flock))))
 
 (defn go-for-goal
   "Flock (ignored), bird -> heading."
