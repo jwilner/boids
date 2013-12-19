@@ -8,7 +8,7 @@
 (def canvas (.getElementById js/document "sky"))
 (def context (.getContext canvas "2d"))
 (def canvas-dimensions [(.-width canvas) (.-height canvas)])
-(def timeout-ms 8)
+(def timeout-ms 2)
 (def num-birds 30)
 (def visible-range 200)
 (def max-heading-len 4)
@@ -27,9 +27,6 @@
   (str \# (.toString (Math/floor (* (Math/random)
                                      16777215))
                      16)))
-
-(print-func (random-hex-color))
-
 ;; DRAWING
 
 (defn draw-bird!
@@ -38,8 +35,8 @@
   (.fillRect context (:x (:xy bird)) (:y (:xy bird)) 5 5))
 
 (defn draw-obstacle! [obs]
-  (let [{xy :xy radius :radius} obs]
-    (set! (.-strokeStyle context) (random-hex-color))
+  (let [{xy :xy radius :radius color :color} obs]
+    (set! (.-fillStyle context) color)
     (.beginPath context)
     (.arc context (:x xy) (:y xy) (- radius 20) 0 (* 2 Math/PI))
     (.fill context)))
@@ -93,13 +90,6 @@
         birds-too-close (birds-within-radius bird flock min-separation)
         away-dirs (map weighted-away-dir birds-too-close)
         result (v/sum away-dirs)]
-
-    #_(print-func "DEBUG maintain-separation" "\n\t"
-                  birds-too-close "\n\t"
-                  weighted-away-dir "\n\t"
-                  away-dirs "\n\t"
-                  result)
-
     result))
 
 (defn align-heading
@@ -180,7 +170,8 @@
                           (let [x (.-clientX e)
                                 y (.-clientY e)]
                             (reset! obstacle (assoc obstacle-template
-                                                    :xy (v/Vector2d. x y)))
+                                                    :xy (v/Vector2d. x y)
+                                                    :color (random-hex-color)))
                             (<! (timeout obstacle-timeout))
                             (reset! obstacle nil))))))))))
 
@@ -189,13 +180,13 @@
 (defn checkbox! [parent func-name]
   (let [li (dom/createElement "li")
         label-node (dom/createElement "label")
-        text (dom/createTextNode func-name)
+        text (dom/createTextNode (str " " func-name))
         input (dom/createElement "input")]
     (set! (.-type input) "checkbox")
     (.appendChild parent li)
     (.appendChild li label-node)
-    (.appendChild label-node text)
     (.appendChild label-node input)
+    (.appendChild label-node text)
     input))
 
 (defn assoc-checkbox [checkbox function]
@@ -208,11 +199,11 @@
           (swap! behaviors #(action % function)))))))
 
 (let [box (dom/getElement "box")]
-  (doseq [[fname func] [["go-for-goal" go-for-goal]
+  (doseq [[fname func] [["maintain-separation" maintain-separation]
                         ["adhere-to-center" adhere-to-center]
                         ["align-heading" align-heading]
                         ["obstacle-avoidance" obstacle-avoidance]
-                        ["maintain-separation" maintain-separation]]]
+                        ["go-for-goal" go-for-goal]]]
     (assoc-checkbox (checkbox! box fname) func)))
 
 ;; WORLD TICKER
