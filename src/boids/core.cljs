@@ -17,7 +17,7 @@
 (def inertia (atom default-inertia))
 (def goal (atom nil))
 (def obstacle (atom nil))
-(def obstacle-template {:xy (v/Vector2d. 200 200) :radius 100 :color "black"})
+(def obstacle-template {:xy (v/Vector2d. 200 200) :radius 100})
 (def obstacle-timeout 10000)
 
 (defn print-func [& x]
@@ -38,8 +38,8 @@
   (.fillRect context (:x (:xy bird)) (:y (:xy bird)) 5 5))
 
 (defn draw-obstacle! [obs]
-  (let [{xy :xy radius :radius color :color} obs]
-    (set! (.-strokeStyle context) color)
+  (let [{xy :xy radius :radius} obs]
+    (set! (.-strokeStyle context) (random-hex-color))
     (.beginPath context)
     (.arc context (:x xy) (:y xy) (- radius 20) 0 (* 2 Math/PI))
     (.fill context)))
