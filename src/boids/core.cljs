@@ -186,6 +186,35 @@
 
 (handle-events)
 
+(defn checkbox! [parent func-name]
+  (let [li (dom/createElement "li")
+        label-node (dom/createElement "label")
+        text (dom/createTextNode func-name)
+        input (dom/createElement "input")]
+    (set! (.-type input) "checkbox")
+    (.appendChild parent li)
+    (.appendChild li label-node)
+    (.appendChild label-node text)
+    (.appendChild label-node input)
+    input))
+
+(defn assoc-checkbox [checkbox function]
+  (let [el (listen checkbox "change")]
+    (go
+      (while true
+        (let [e (<! el)
+              checked (.-checked (.-target e))
+              action (if checked conj disj)]
+          (swap! behaviors #(action % function)))))))
+
+(let [box (dom/getElement "box")]
+  (doseq [[fname func] [["go-for-goal" go-for-goal]
+                        ["adhere-to-center" adhere-to-center]
+                        ["align-heading" align-heading]
+                        ["obstacle-avoidance" obstacle-avoidance]
+                        ["maintain-separation" maintain-separation]]]
+    (assoc-checkbox (checkbox! box fname) func)))
+
 ;; WORLD TICKER
 
 (defn tick
