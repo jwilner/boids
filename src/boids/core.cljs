@@ -9,10 +9,10 @@
 (def context (.getContext canvas "2d"))
 (def canvas-dimensions [(.-width canvas) (.-height canvas)])
 (def timeout-ms 8)
-(def num-birds 25)
+(def num-birds 30)
 (def visible-range 200)
-(def max-heading-len 3)
-(def min-separation 20)
+(def max-heading-len 4)
+(def min-separation 30)
 (def default-inertia 10)
 (def inertia (atom default-inertia))
 (def goal (atom nil))
@@ -22,6 +22,13 @@
 
 (defn print-func [& x]
   (. js/console (log (apply str x))))
+
+(defn random-hex-color []
+  (str \# (.toString (Math/floor (* (Math/random)
+                                     16777215))
+                     16)))
+
+(print-func (random-hex-color))
 
 ;; DRAWING
 
@@ -200,7 +207,7 @@
 (tick (for [n (range num-birds)]
         {:xy (v/Vector2d. (rand-int (first canvas-dimensions))
                           (rand-int (second canvas-dimensions)))
-         :color "black"
+         :color (random-hex-color)
          :uid n
          :heading (v/Vector2d. (* (sign) (rand-int (first canvas-dimensions)))
                                (* (sign) (rand-int (second canvas-dimensions))))}))
