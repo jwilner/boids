@@ -126,17 +126,19 @@
       v/origin)
     v/origin))
 
-(def behaviors [(partial if-empty-wrapper adhere-to-center)
-                (partial if-empty-wrapper align-heading)
-                (partial if-empty-wrapper maintain-separation)
-                obstacle-avoidance
-                go-for-goal])
+(def all-behaviors [adhere-to-center
+                    align-heading
+                    maintain-separation
+                    obstacle-avoidance
+                    go-for-goal])
+
+(def behaviors (atom #{}))
 
 ;; BOID CONTROL
 
 (defn update-heading
   "bird, [list of birds] -> bird with new heading."
-  [{:keys [heading xy] :as bird} flock]
+  [{:keys [heading xy] :as bird} flock behaviors]
   (let [visible-birds (birds-within-radius bird flock visible-range)
         list-of-new-headings (map #(% visible-birds bird) behaviors)
         new-heading (v/normalize (v/sum list-of-new-headings))]
@@ -195,10 +197,11 @@
           (draw-obstacle! o))
         (doseq [bird boids]
           (draw-bird! bird))
-        (recur (map (fn [bird] (-> bird
-                                   (update-heading boids)
-                                   (update-coords)))
-                    boids)))))
+        (let [bs @behaviors]
+          (recur (map (fn [bird] (-> bird
+                                     (update-heading boids bs)
+                                     (update-coords)))
+                    boids))))))
 
 (defn sign [] (if (< (rand) .5) -1 1))
 
