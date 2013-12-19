@@ -17,7 +17,7 @@
 (def inertia (atom default-inertia))
 (def goal (atom nil))
 (def obstacle (atom nil))
-(def obstacle-template {:xy (v/Vector2d. 200 200) :radius 100})
+(def obstacle-template {:xy (v/Vector2d. 200 200) :radius 100 :color "black"})
 (def obstacle-timeout 10000)
 
 (defn print-func [& x]
@@ -25,42 +25,26 @@
 
 ;; DRAWING
 
-(defn render-bird!
-  [context bird color]
-  (set! (.-fillStyle context) color)
+(defn draw-bird!
+  [bird]
+  (set! (.-fillStyle context) (:color bird))
   (.fillRect context (:x (:xy bird)) (:y (:xy bird)) 5 5))
 
-(defn draw-bird!
-  [context bird]
-  (render-bird! context bird (:color bird)))
-
-(defn erase-bird!
-  [context bird]
-  (let [[x y] (:xy bird)]
-    (.clearRect context x y 5 5)))
-
-(defn render-obstacle!
-  [color]
-  (let [{xy :xy radius :radius} @obstacle]
+(defn draw-obstacle! [obs]
+  (let [{xy :xy radius :radius color :color} obs]
     (set! (.-strokeStyle context) color)
     (.beginPath context)
     (.arc context (:x xy) (:y xy) (- radius 20) 0 (* 2 Math/PI))
     (.fill context)))
 
-(defn draw-obstacle! []
-  (render-obstacle! "black"))
-
-(defn erase-obstacle! []
-  (render-obstacle! "white"))
-
-(defn wrap [v]
-  (v/wrap v (first canvas-dimensions) (second canvas-dimensions)))
-
-(defn erase-canvas! [context]
+(defn erase-canvas! []
   (let [[l w] canvas-dimensions]
     (.clearRect context 0 0 l w)))
 
 ;; MATHS
+
+(defn wrap [v]
+  (v/wrap v (first canvas-dimensions) (second canvas-dimensions)))
 
 (defn if-empty-wrapper
   [func neighbors bird]
@@ -154,7 +138,7 @@
 
     ;; debug
     #_(when (some #(js/isNaN (:x %)) list-of-new-headings)
-        (render-bird! context bird "red")
+        (render-bird! bird "red")
         (print-func list-of-new-headings)
         (throw "BOOM"))
 
@@ -201,14 +185,15 @@
   [boids]
   (go (loop [boids boids]
         (<! (timeout timeout-ms))
-        (erase-canvas! context)
+        (erase-canvas!)
         (when-let [o @obstacle]
-          (draw-obstacle!))
+          (draw-obstacle! o))
         (doseq [bird boids]
-          (draw-bird! context bird))
+          (draw-bird! bird))
         (recur (map (fn [bird] (-> bird
-                                      (update-heading boids)
-                                      (update-coords))) boids)))))
+                                   (update-heading boids)
+                                   (update-coords)))
+                    boids)))))
 
 (defn sign [] (if (< (rand) .5) -1 1))
 
