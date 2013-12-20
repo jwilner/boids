@@ -9,12 +9,10 @@
 (def context (.getContext canvas "2d"))
 (def canvas-dimensions [(.-width canvas) (.-height canvas)])
 (def timeout-ms 2)
-(def num-birds 30)
+(def num-birds 25)
 (def visible-range 200)
 (def max-heading-len 4)
 (def min-separation 30)
-(def default-inertia 10)
-(def inertia (atom default-inertia))
 (def goal (atom nil))
 (def obstacle (atom nil))
 (def obstacle-template {:xy (v/Vector2d. 200 200) :radius 100})
@@ -132,13 +130,6 @@
   (let [visible-birds (birds-within-radius bird flock visible-range)
         list-of-new-headings (map #(% visible-birds bird) behaviors)
         new-heading (v/normalize (v/sum list-of-new-headings))]
-
-    ;; debug
-    #_(when (some #(js/isNaN (:x %)) list-of-new-headings)
-        (render-bird! bird "red")
-        (print-func list-of-new-headings)
-        (throw "BOOM"))
-
     (assoc bird :heading (v/ceil (v/add heading new-heading) max-heading-len))))
 
 (defn update-coords
