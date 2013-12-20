@@ -153,10 +153,8 @@
         (let [e (<! events)
               t (.-type e)]
           (case t
-            "mousemove" (do (reset! goal (v/Vector2d. (.-clientX e) (.-clientY e)))
-                            (reset! inertia (/ default-inertia 2)))
-            "mouseout" (do (reset! goal nil)
-                           (reset! inertia default-inertia))
+            "mousemove" (reset! goal (v/Vector2d. (.-clientX e) (.-clientY e)))
+            "mouseout" (reset! goal nil)
             "click" (go (do
                           (let [x (.-clientX e)
                                 y (.-clientY e)]
