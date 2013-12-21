@@ -11,7 +11,7 @@
 (def timeout-ms 2)
 (def num-birds 25)
 (def visible-range (atom 200))
-(def max-heading-len 4)
+(def max-heading-len (atom 4))
 (def min-separation (atom 30))
 (def goal (atom nil))
 (def obstacle (atom nil))
@@ -131,7 +131,7 @@
   (let [visible-birds (birds-within-radius bird flock @visible-range)
         list-of-new-headings (map #(% visible-birds bird) behaviors)
         new-heading (v/normalize (v/sum list-of-new-headings))]
-    (assoc bird :heading (v/ceil (v/add heading new-heading) max-heading-len))))
+    (assoc bird :heading (v/ceil (v/add heading new-heading) @max-heading-len))))
 
 (defn update-coords
   "bird -> bird with new xy coordinates and velocity."
@@ -223,10 +223,13 @@
                         ["obstacle-avoidance" obstacle-avoidance]
                         ["go-for-goal" go-for-goal]]]
     (assoc-checkbox (checkbox! box fname) func))
+  (.appendChild box (dom/createElement "hr"))
   (assoc-slider (slider! box "visible-range")
                 visible-range 50 500 200)
   (assoc-slider (slider! box "min-sep")
-                min-separation 1 400 30))
+                min-separation 1 400 30)
+  (assoc-slider (slider! box "max-heading")
+                max-heading-len 1 20 4))
 
 ;; WORLD TICKER
 
