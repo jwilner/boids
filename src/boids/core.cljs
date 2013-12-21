@@ -10,9 +10,9 @@
 (def canvas-dimensions [(.-width canvas) (.-height canvas)])
 (def timeout-ms 2)
 (def num-birds 25)
-(def visible-range 200)
+(def visible-range (atom 200))
 (def max-heading-len 4)
-(def min-separation 30)
+(def min-separation (atom 30))
 (def goal (atom nil))
 (def obstacle (atom nil))
 (def obstacle-template {:xy (v/Vector2d. 200 200) :radius 100})
@@ -30,7 +30,7 @@
 (defn draw-bird!
   [bird]
   (set! (.-fillStyle context) (:color bird))
-  (.fillRect context (:x (:xy bird)) (:y (:xy bird)) 5 5))
+  (.fillRect context (:x (:xy bird)) (:y (:xy bird)) 7 7))
 
 (defn draw-obstacle! [obs]
   (let [{xy :xy radius :radius color :color} obs]
@@ -84,8 +84,9 @@
 (defn maintain-separation
   "Flock, bird -> heading."
   [flock {:keys [xy] :as bird}]
-  (let [weighted-away-dir (fn [bird] (weighted-repulsion (:xy bird) xy min-separation))
-        birds-too-close (birds-within-radius bird flock min-separation)
+  (let [min-sep @min-separation
+        weighted-away-dir (fn [bird] (weighted-repulsion (:xy bird) xy min-sep))
+        birds-too-close (birds-within-radius bird flock min-sep)
         away-dirs (map weighted-away-dir birds-too-close)
         result (v/sum away-dirs)]
     result))
@@ -127,7 +128,7 @@
 (defn update-heading
   "bird, [list of birds] -> bird with new heading."
   [{:keys [heading xy] :as bird} flock behaviors]
-  (let [visible-birds (birds-within-radius bird flock visible-range)
+  (let [visible-birds (birds-within-radius bird flock @visible-range)
         list-of-new-headings (map #(% visible-birds bird) behaviors)
         new-heading (v/normalize (v/sum list-of-new-headings))]
     (assoc bird :heading (v/ceil (v/add heading new-heading) max-heading-len))))
@@ -202,13 +203,30 @@
               action (if checked conj disj)]
           (swap! behaviors #(action % function)))))))
 
+(defn assoc-slider [[slider span] prop minimum maximum default]
+  (let [el (listen slider "change")]
+    (set! (.-min slider) minimum)
+    (set! (.-max slider) maximum)
+    (set! (.-value slider) default)
+    (set! (.-innerText span) default)
+    (go
+      (while true
+        (let [e (<! el)
+              value (.-value (.-target e))]
+          (set! (.-innerText span) value)
+          (reset! prop value))))))
+
 (let [box (dom/getElement "box")]
   (doseq [[fname func] [["maintain-separation" maintain-separation]
                         ["adhere-to-center" adhere-to-center]
                         ["align-heading" align-heading]
                         ["obstacle-avoidance" obstacle-avoidance]
                         ["go-for-goal" go-for-goal]]]
-    (assoc-checkbox (checkbox! box fname) func)))
+    (assoc-checkbox (checkbox! box fname) func))
+  (assoc-slider (slider! box "visible-range")
+                visible-range 50 500 200)
+  (assoc-slider (slider! box "min-sep")
+                min-separation 1 400 30))
 
 ;; WORLD TICKER
 
