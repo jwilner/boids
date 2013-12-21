@@ -178,6 +178,21 @@
     (.appendChild label-node text)
     input))
 
+(defn slider! [parent prop]
+  (let [li (dom/createElement "li")
+        label-node (dom/createElement "label")
+        text (dom/createTextNode (str " " prop ": "))
+        input (dom/createElement "input")
+        span (dom/createElement "span")]
+    (set! (.-type input) "range")
+    (.appendChild parent li)
+    (.appendChild li label-node)
+    (.appendChild label-node text)
+    (.appendChild label-node span)
+    (.appendChild label-node (dom/createElement "br"))
+    (.appendChild label-node input)
+    [input span]))
+
 (defn assoc-checkbox [checkbox function]
   (let [el (listen checkbox "change")]
     (go
