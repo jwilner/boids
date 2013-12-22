@@ -36,22 +36,25 @@
 (defn heading-to-radians
   [{x :x y :y}]
   (let [hypotenuse (Math/sqrt (+ (Math/pow x 2)
-                                 (Math/pow y 2)))]
-    (mod (Math/asin (/ y hypotenuse)) two-pi)))
+                                 (Math/pow y 2)))
+        result (mod (Math/asin (/ y hypotenuse)) two-pi)]
+    (when (< (* 0.5 Math/PI) result (* 1.5 Math/PI))
+      (print-func result))
+    result))
 
 (defn draw-bird!
   [{:keys [xy color size heading] :as bird}]
   (let [{x :x y :y} xy
         half (/ size 2)]
     (.save context)
-    (.translate context (- x half) y)
+    (.translate context x y)
     (.rotate context (heading-to-radians heading))
     (set! (.-strokeStyle context) color)
     (set! (.-lineWidth context) 2)
     (.beginPath context)
-    (.moveTo context half 0)
-    (.lineTo context size size)
-    (.moveTo context half 0)
+    (.moveTo context size half)
+    (.lineTo context 0 0)
+    (.moveTo context size half)
     (.lineTo context 0 size)
     (.closePath context)
     (.stroke context)
