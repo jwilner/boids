@@ -42,13 +42,8 @@
       this))
   (wrap [this modulus-x modulus-y]
     (Vector2d. (mod (Math/round (:x this)) modulus-x) (mod (Math/round (:y this)) modulus-y)))
-  (angle [this]
-    (let [offset (+ (if (and (neg? (:y this)) (neg? (:x this))) Math/PI 0)
-                    (if (neg? (:x this)) (/ Math/PI 4) 0)
-                    (if (neg? (:y this)) (/ Math/PI 2) 0))]
-      (if (neg? (:y this))
-        (+ offset (* -1 (Math/asin (/ (:y this) (length this)))))
-        (Math/asin (/ (:y this) (length this))))))
+  (angle [{x :x y :y}]
+    (mod (Math/atan2 y x) (* 2 Math/PI)))
   ILookup
   (-lookup [this key default]
     (condp keyword-identical? key
