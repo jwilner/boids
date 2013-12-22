@@ -146,9 +146,11 @@
          (ceil (Vector2d. 3 4) 6))
 
 ;; angle
-
-;(print-func (angle origin))
-(print-func (angle (Vector2d. 1 1)))
-(print-func (* 45 (/ Math/PI 180)))
-(print-func (angle (Vector2d. -1 1)))
-(print-func (angle (Vector2d. -1 -1)))
+(assert (= 0 (angle origin)))
+(assert (= 0 (angle (Vector2d. 1 0))))
+(assert (= (/ Math/PI 4) (angle (Vector2d. 1 1))))
+(assert (= (/ Math/PI 2) (angle (Vector2d. 0 1))))
+(assert (= Math/PI (angle (Vector2d. -1 0))))
+(assert (= (* Math/PI (/ 5 4)) (angle (Vector2d. -1 -1))))
+(assert (= (* Math/PI (/ 3 2)) (angle (Vector2d. 0 -1))))
+(assert (= (* Math/PI (/ 7 4)) (angle (Vector2d. 1 -1))))
