@@ -27,10 +27,36 @@
                      16)))
 ;; DRAWING
 
-(defn draw-bird!
+#_(defn draw-bird!
   [bird]
   (set! (.-fillStyle context) (:color bird))
   (.fillRect context (:x (:xy bird)) (:y (:xy bird)) 7 7))
+
+(defn draw-bird!
+  [{:keys [xy color size heading] :as bird}]
+  (let [rot (heading-to-radians heading)]
+    (.rotate context rot)
+    (set! (.-strokeStyle context) color)
+    (set! (.-lineWidth context) 2)
+    (let [{x :x y :y} xy
+          half (/ size 2)
+          x-and-half (+ x half)
+          y-and-size (+ y size)]
+      (.beginPath context)
+      (.moveTo context x-and-half y)
+      (.lineTo context (+ x size) y-and-size)
+      (.moveTo context x-and-half y)
+      (.lineTo context x y-and-size)
+      (.closePath context)
+      (.stroke context))
+    (.rotate context -rot)))
+
+(defn heading-to-radians
+  [{x :x y :y}]
+  (let [hypotenuse (Math/sqrt (+ (Math/pow x 2)
+                                 (Math/pow y 2)))]
+  (Math/asin (/ y hypotenuse))))
+
 
 (defn draw-obstacle! [obs]
   (let [{xy :xy radius :radius color :color} obs]
@@ -254,6 +280,7 @@
         {:xy (v/Vector2d. (rand-int (first canvas-dimensions))
                           (rand-int (second canvas-dimensions)))
          :color (random-hex-color)
+         :size 8
          :uid n
          :heading (v/Vector2d. (* (sign) (rand-int (first canvas-dimensions)))
                                (* (sign) (rand-int (second canvas-dimensions))))}))
