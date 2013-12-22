@@ -36,26 +36,26 @@
   [{x :x y :y}]
   (let [hypotenuse (Math/sqrt (+ (Math/pow x 2)
                                  (Math/pow y 2)))]
-  (Math/asin (/ y hypotenuse))))
+        (rem (Math/asin (/ y hypotenuse)) Math/PI)))
 
 (defn draw-bird!
   [{:keys [xy color size heading] :as bird}]
-  (let [rot (heading-to-radians heading)]
+  (let [rot (heading-to-radians heading)
+        {x :x y :y} xy
+        half (/ size 2)]
+    (.save context)
+    (.translate context x y)
     (.rotate context rot)
     (set! (.-strokeStyle context) color)
     (set! (.-lineWidth context) 2)
-    (let [{x :x y :y} xy
-          half (/ size 2)
-          x-and-half (+ x half)
-          y-and-size (+ y size)]
-      (.beginPath context)
-      (.moveTo context x-and-half y)
-      (.lineTo context (+ x size) y-and-size)
-      (.moveTo context x-and-half y)
-      (.lineTo context x y-and-size)
-      (.closePath context)
-      (.stroke context))
-    (.rotate context (- rot))))
+    (.beginPath context)
+    (.moveTo context half 0)
+    (.lineTo context size size)
+    (.moveTo context half 0)
+    (.lineTo context 0 size)
+    (.closePath context)
+    (.stroke context)
+    (.restore context)))
 
 
 (defn draw-obstacle! [obs]
