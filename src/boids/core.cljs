@@ -7,6 +7,7 @@
 
 (def canvas (.getElementById js/document "sky"))
 (def context (.getContext canvas "2d"))
+(def two-pi (* Math/PI 2))
 (def canvas-dimensions [(.-width canvas) (.-height canvas)])
 (def timeout-ms 2)
 (def num-birds 25)
@@ -36,16 +37,15 @@
   [{x :x y :y}]
   (let [hypotenuse (Math/sqrt (+ (Math/pow x 2)
                                  (Math/pow y 2)))]
-        (rem (Math/asin (/ y hypotenuse)) Math/PI)))
+    (mod (Math/asin (/ y hypotenuse)) two-pi)))
 
 (defn draw-bird!
   [{:keys [xy color size heading] :as bird}]
-  (let [rot (heading-to-radians heading)
-        {x :x y :y} xy
+  (let [{x :x y :y} xy
         half (/ size 2)]
     (.save context)
-    (.translate context x y)
-    (.rotate context rot)
+    (.translate context (- x half) y)
+    (.rotate context (heading-to-radians heading))
     (set! (.-strokeStyle context) color)
     (set! (.-lineWidth context) 2)
     (.beginPath context)
