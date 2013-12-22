@@ -32,6 +32,12 @@
   (set! (.-fillStyle context) (:color bird))
   (.fillRect context (:x (:xy bird)) (:y (:xy bird)) 7 7))
 
+(defn heading-to-radians
+  [{x :x y :y}]
+  (let [hypotenuse (Math/sqrt (+ (Math/pow x 2)
+                                 (Math/pow y 2)))]
+  (Math/asin (/ y hypotenuse))))
+
 (defn draw-bird!
   [{:keys [xy color size heading] :as bird}]
   (let [rot (heading-to-radians heading)]
@@ -49,13 +55,7 @@
       (.lineTo context x y-and-size)
       (.closePath context)
       (.stroke context))
-    (.rotate context -rot)))
-
-(defn heading-to-radians
-  [{x :x y :y}]
-  (let [hypotenuse (Math/sqrt (+ (Math/pow x 2)
-                                 (Math/pow y 2)))]
-  (Math/asin (/ y hypotenuse))))
+    (.rotate context (- rot))))
 
 
 (defn draw-obstacle! [obs]
