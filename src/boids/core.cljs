@@ -33,22 +33,13 @@
   (set! (.-fillStyle context) (:color bird))
   (.fillRect context (:x (:xy bird)) (:y (:xy bird)) 7 7))
 
-(defn heading-to-radians
-  [{x :x y :y}]
-  (let [hypotenuse (Math/sqrt (+ (Math/pow x 2)
-                                 (Math/pow y 2)))
-        result (mod (Math/asin (/ y hypotenuse)) two-pi)]
-    (when (< (* 0.5 Math/PI) result (* 1.5 Math/PI))
-      (print-func result))
-    result))
-
 (defn draw-bird!
   [{:keys [xy color size heading] :as bird}]
   (let [{x :x y :y} xy
         half (/ size 2)]
     (.save context)
-    (.translate context x y)
-    (.rotate context (heading-to-radians heading))
+    (.translate context (:x xy) (:y xy))
+    (.rotate context (v/angle heading))
     (set! (.-strokeStyle context) color)
     (set! (.-lineWidth context) 2)
     (.beginPath context)

@@ -11,7 +11,8 @@
   (scale  [this l] "Scales the vector by a number l.")
   (normalize [this] "Divides a vector by its length, returning a vector of length = 1.")
   (ceil [this maximum] "If the length of this > maximum, then scale this to maximum.")
-  (wrap [this modulus-x modulus-y] "Mods the vector by modulus (coordinate-wise)."))
+  (wrap [this modulus-x modulus-y] "Mods the vector by modulus (coordinate-wise).")
+  (angle [this] "Finds the angle of the vector in radians."))
 
 (deftype Vector2d
   [x y]
@@ -41,6 +42,13 @@
       this))
   (wrap [this modulus-x modulus-y]
     (Vector2d. (mod (Math/round (:x this)) modulus-x) (mod (Math/round (:y this)) modulus-y)))
+  (angle [this]
+    (let [offset (+ (if (and (neg? (:y this)) (neg? (:x this))) Math/PI 0)
+                    (if (neg? (:x this)) (/ Math/PI 4) 0)
+                    (if (neg? (:y this)) (/ Math/PI 2) 0))]
+      (if (neg? (:y this))
+        (+ offset (* -1 (Math/asin (/ (:y this) (length this)))))
+        (Math/asin (/ (:y this) (length this))))))
   ILookup
   (-lookup [this key default]
     (condp keyword-identical? key
@@ -136,3 +144,11 @@
          (ceil (Vector2d. 3 4) 5))
 (eq-test (Vector2d. 3 4)
          (ceil (Vector2d. 3 4) 6))
+
+;; angle
+
+;(print-func (angle origin))
+(print-func (angle (Vector2d. 1 1)))
+(print-func (* 45 (/ Math/PI 180)))
+(print-func (angle (Vector2d. -1 1)))
+(print-func (angle (Vector2d. -1 -1)))
