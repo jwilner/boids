@@ -28,11 +28,6 @@
                      16)))
 ;; DRAWING
 
-#_(defn draw-bird!
-  [bird]
-  (set! (.-fillStyle context) (:color bird))
-  (.fillRect context (:x (:xy bird)) (:y (:xy bird)) 7 7))
-
 (defn draw-bird!
   [{:keys [xy color size heading] :as bird}]
   (let [{x :x y :y} xy
@@ -50,7 +45,6 @@
     (.closePath context)
     (.stroke context)
     (.restore context)))
-
 
 (defn draw-obstacle! [obs]
   (let [{xy :xy radius :radius color :color} obs]
@@ -186,6 +180,8 @@
                             (reset! obstacle nil))))))))))
 
 (handle-events)
+
+;; UI
 
 (defn checkbox! [parent func-name]
   (let [li (dom/createElement "li")
