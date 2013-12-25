@@ -12,7 +12,8 @@
   (normalize [this] "Divides a vector by its length, returning a vector of length = 1.")
   (ceil [this maximum] "If the length of this > maximum, then scale this to maximum.")
   (wrap [this modulus-x modulus-y] "Mods the vector by modulus (coordinate-wise).")
-  (angle [this] "Finds the angle of the vector in radians."))
+  (angle [this] "Finds the angle of the vector in radians. The angle of the
+                origin vector is 0 rad."))
 
 (deftype Vector2d
   [x y]
@@ -42,8 +43,10 @@
       this))
   (wrap [this modulus-x modulus-y]
     (Vector2d. (mod (Math/round (:x this)) modulus-x) (mod (Math/round (:y this)) modulus-y)))
-  (angle [{x :x y :y}]
-    (mod (Math/atan2 y x) (* 2 Math/PI)))
+  (angle [this]
+    (if (not= this (Vector2d. 0 0))
+      (mod (Math/atan2 (:y this) (:x this)) (* 2 Math/PI))
+      0))
   ILookup
   (-lookup [this key default]
     (condp keyword-identical? key
