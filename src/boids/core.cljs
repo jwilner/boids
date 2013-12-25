@@ -224,10 +224,13 @@
               action (if checked conj disj)]
           (swap! behaviors #(action % function)))))))
 
-(defn assoc-slider [[slider span] prop minimum maximum default]
+(defn assoc-slider
+  "Creates an html5 slider and a channel to listen to events on it."
+  [[slider span] prop minimum maximum default]
   (let [el (listen slider "change")]
     (set! (.-min slider) minimum)
     (set! (.-max slider) maximum)
+    (set! (.-step slider) (/ (- maximum minimum) 100))
     (set! (.-value slider) default)
     (set! (.-innerText span) default)
     (go
