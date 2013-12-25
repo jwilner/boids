@@ -249,13 +249,13 @@
     (assoc-checkbox (checkbox! box fname) func))
   (.appendChild box (dom/createElement "hr"))
   (assoc-slider (slider! box "visible-range")
-                visible-range 50 500 200)
+                visible-range 0 500 250)
   (assoc-slider (slider! box "min-sep")
-                min-separation 1 400 30)
+                min-separation 0 60 30)
   (assoc-slider (slider! box "max-heading")
-                max-heading-len 1 20 1)
+                max-heading-len 0 2 1)
   (assoc-slider (slider! box "max-speed")
-                max-speed 1 20 2))
+                max-speed 0 8 2))
 
 ;; WORLD TICKER
 
