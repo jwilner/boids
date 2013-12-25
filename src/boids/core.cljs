@@ -13,7 +13,7 @@
 (def num-birds 25)
 (def visible-range (atom 200))
 (def max-heading-len (atom 1))
-(def max-speed 4)
+(def max-speed (atom 4))
 (def min-separation (atom 30))
 (def goal (atom nil))
 (def obstacle (atom nil))
@@ -153,7 +153,7 @@
   [{:keys [xy heading velocity] :as bird}]
   (assoc bird :xy (wrap (v/add velocity xy))
          :velocity (v/ceil (v/add velocity heading)
-                           max-speed)))
+                           @max-speed)))
 
 ;; EVENTS
 
@@ -248,7 +248,9 @@
   (assoc-slider (slider! box "min-sep")
                 min-separation 1 400 30)
   (assoc-slider (slider! box "max-heading")
-                max-heading-len 1 20 4))
+                max-heading-len 1 20 1)
+  (assoc-slider (slider! box "max-speed")
+                max-speed 1 20 2))
 
 ;; WORLD TICKER
 
