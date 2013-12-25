@@ -12,7 +12,8 @@
 (def timeout-ms 2)
 (def num-birds 25)
 (def visible-range (atom 200))
-(def max-heading-len (atom 4))
+(def max-heading-len (atom 1))
+(def max-speed 4)
 (def min-separation (atom 30))
 (def goal (atom nil))
 (def obstacle (atom nil))
@@ -150,7 +151,9 @@
 (defn update-coords
   "bird -> bird with new xy coordinates and velocity."
   [{:keys [xy heading velocity] :as bird}]
-  (assoc bird :xy (wrap (v/add xy heading))))
+  (assoc bird :xy (wrap (v/add velocity xy))
+         :velocity (v/ceil (v/add velocity heading)
+                           max-speed)))
 
 ;; EVENTS
 
@@ -272,5 +275,6 @@
          :color (random-hex-color)
          :size 8
          :uid n
+         :velocity v/origin
          :heading (v/Vector2d. (* (sign) (rand-int (first canvas-dimensions)))
                                (* (sign) (rand-int (second canvas-dimensions))))}))
