@@ -136,7 +136,7 @@
                     obstacle-avoidance
                     go-for-goal])
 
-(def behaviors (atom #{}))
+(def behaviors (atom #{adhere-to-center align-heading maintain-separation}))
 
 ;; BOID CONTROL
 
@@ -186,12 +186,14 @@
 
 ;; UI
 
-(defn checkbox! [parent func-name]
+(defn checkbox!
+  [parent func-name & {:keys [checked?] :or {checked? false}}]
   (let [li (dom/createElement "li")
         label-node (dom/createElement "label")
         text (dom/createTextNode (str " " func-name))
         input (dom/createElement "input")]
     (set! (.-type input) "checkbox")
+    (set! (.-checked input) checked?)
     (.appendChild parent li)
     (.appendChild li label-node)
     (.appendChild label-node input)
@@ -241,12 +243,15 @@
           (reset! prop value))))))
 
 (let [box (dom/getElement "box")]
-  (doseq [[fname func] [["maintain-separation" maintain-separation]
-                        ["adhere-to-center" adhere-to-center]
-                        ["align-heading" align-heading]
-                        ["obstacle-avoidance" obstacle-avoidance]
-                        ["go-for-goal" go-for-goal]]]
-    (assoc-checkbox (checkbox! box fname) func))
+
+  ;; checkboxes
+  (assoc-checkbox (checkbox! box "maintain-separation" :checked? true)  maintain-separation)
+  (assoc-checkbox (checkbox! box "adhere-to-center" :checked? true)     adhere-to-center)
+  (assoc-checkbox (checkbox! box "align-heading" :checked? true)        align-heading)
+  (assoc-checkbox (checkbox! box "obstacle-avoidance")                  obstacle-avoidance)
+  (assoc-checkbox (checkbox! box "go-for-goal")                         go-for-goal)
+
+  ;; sliders
   (.appendChild box (dom/createElement "hr"))
   (assoc-slider (slider! box "visible-range")
                 visible-range 0 500 250)
